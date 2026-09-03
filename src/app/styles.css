@@ -1,0 +1,39 @@
+:root {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  color: #17332f;
+  background: #f4efe6;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #f4efe6; }
+button { font: inherit; }
+.app-shell { min-height: 100svh; display: flex; flex-direction: column; background: radial-gradient(circle at 100% 0%, #e6d5b8 0, transparent 34%), #f4efe6; }
+.main-content { width: min(100%, 680px); flex: 1; margin: 0 auto; padding: 48px 24px 132px; }
+.brand-block { margin-bottom: 40px; }
+.eyebrow { margin: 0 0 12px; color: #c25735; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; }
+h1, h2 { font-family: 'Noto Serif SC', 'SimSun', serif; }
+h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-height: 0.95; }
+.intro { max-width: 22rem; margin: 20px 0 0; color: #536b64; font-size: 1.1rem; }
+.welcome-panel { display: flex; gap: 18px; align-items: center; padding: 24px 20px; border: 1px solid #d9cbb5; border-radius: 8px; background: rgba(255, 252, 245, 0.72); }
+.panel-mark { display: grid; flex: 0 0 52px; place-items: center; width: 52px; height: 52px; border-radius: 50%; color: #f4efe6; background: #1f6f5b; font-family: 'Noto Serif SC', 'SimSun', serif; font-size: 1.6rem; }
+h2 { margin: 0 0 8px; font-size: 1.35rem; }
+.welcome-panel p { margin: 0; color: #536b64; line-height: 1.6; }
+.disclaimer { margin: 28px 4px 0; color: #806f5c; font-size: 0.9rem; line-height: 1.6; }
+.bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; display: flex; justify-content: center; gap: 8px; padding: 10px max(16px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-bottom)); border-top: 1px solid #d9cbb5; background: rgba(244, 239, 230, 0.94); backdrop-filter: blur(12px); }
+.nav-item { display: flex; min-width: 88px; min-height: 48px; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 6px; color: #687a72; background: transparent; cursor: pointer; }
+.nav-item:hover, .nav-item:focus-visible { background: #e9dfd0; outline: 2px solid #c25735; outline-offset: 2px; }
+.nav-item.is-active { color: #1f6f5b; font-weight: 600; }
+.nav-icon { font-family: 'Noto Serif SC', 'SimSun', serif; font-size: 1.1rem; }
+@media (prefers-color-scheme: dark) {
+  :root { color: #edf3eb; background: #182a27; }
+  body, .app-shell { background: radial-gradient(circle at 100% 0%, #3b4535 0, transparent 35%), #182a27; }
+  .intro, .welcome-panel p { color: #b4c5bc; }
+  .welcome-panel { border-color: #455b51; background: rgba(35, 53, 48, 0.8); }
+  .disclaimer { color: #b5a78f; }
+  .bottom-nav { border-color: #455b51; background: rgba(24, 42, 39, 0.94); }
+  .nav-item { color: #9caea5; }
+  .nav-item:hover, .nav-item:focus-visible { background: #30463e; }
+}
+@media (max-width: 380px) { .main-content { padding-right: 16px; padding-left: 16px; } .nav-item { min-width: 82px; } }
