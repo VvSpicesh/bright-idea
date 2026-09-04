@@ -17,6 +17,7 @@ export function App() {
   const [ruleSystem, setRuleSystem] = useState<RuleSystem>(classicSixRules)
   const [question, setQuestion] = useState('')
   const [inputs, setInputs] = useState(['', '', ''])
+  const [retainedInputs, setRetainedInputs] = useState([false, false, false])
   const [errors, setErrors] = useState(['', '', ''])
   const [result, setResult] = useState<DivinationResult | null>(null)
   const [inputMode, setInputMode] = useState<InputMode>('number')
@@ -27,6 +28,7 @@ export function App() {
 
   const updateInput = (index: number, value: string) => {
     setInputs((current) => current.map((item, itemIndex) => itemIndex === index ? value : item))
+    setRetainedInputs((current) => current.map((item, itemIndex) => itemIndex === index ? false : item))
     setErrors((current) => current.map((item, itemIndex) => itemIndex === index ? '' : item))
   }
 
@@ -44,6 +46,7 @@ export function App() {
     })
     setErrors(nextErrors)
     if (!parsed.every(isParsedNumber)) return
+    setRetainedInputs([true, true, true])
     setResult(calculateThreePasses(ruleSystem, parsed as [bigint, bigint, bigint]))
   }
 
@@ -73,7 +76,7 @@ export function App() {
     if (activeSection === '规则') return <section className="status-panel"><h2>规则</h2><p>规则说明后续开放。</p></section>
     return result ? <ResultView result={result} question={question} characterEntries={inputMode === 'character' ? characterEntries : null} onBack={resetToForm} /> : <DivinationForm
       ruleSystem={ruleSystem} setRuleSystem={setRuleSystem} question={question} setQuestion={setQuestion}
-      inputs={inputs} errors={errors} updateInput={updateInput} onSubmit={startDivination} selectedInput={selectedInput} setSelectedInput={setSelectedInput}
+      inputs={inputs} errors={errors} retainedInputs={retainedInputs} updateInput={updateInput} onSubmit={startDivination} selectedInput={selectedInput} setSelectedInput={setSelectedInput}
       inputMode={inputMode} setInputMode={switchInputMode} characterInput={characterInput} setCharacterInput={setCharacterInput}
       characterEntries={characterEntries} characterError={characterError} onConfirmCharacters={beginCharacterConfirmation}
       onCharacterEntriesChange={setCharacterEntries}
@@ -110,9 +113,9 @@ export function App() {
   )
 }
 
-function DivinationForm({ ruleSystem, setRuleSystem, question, setQuestion, inputs, errors, updateInput, onSubmit, inputMode, setInputMode, characterInput, setCharacterInput, characterEntries, characterError, onConfirmCharacters, onCharacterEntriesChange, selectedInput, setSelectedInput }: {
+function DivinationForm({ ruleSystem, setRuleSystem, question, setQuestion, inputs, errors, retainedInputs, updateInput, onSubmit, inputMode, setInputMode, characterInput, setCharacterInput, characterEntries, characterError, onConfirmCharacters, onCharacterEntriesChange, selectedInput, setSelectedInput }: {
   ruleSystem: RuleSystem; setRuleSystem: (value: RuleSystem) => void; question: string; setQuestion: (value: string) => void
-  inputs: string[]; errors: string[]; updateInput: (index: number, value: string) => void; onSubmit: () => void
+  inputs: string[]; errors: string[]; retainedInputs: boolean[]; updateInput: (index: number, value: string) => void; onSubmit: () => void
   inputMode: InputMode; setInputMode: (mode: InputMode) => void; characterInput: string; setCharacterInput: (value: string) => void
   characterEntries: CharacterEntry[] | null; characterError: string; onConfirmCharacters: () => void
   onCharacterEntriesChange: (entries: CharacterEntry[] | null) => void; selectedInput: number; setSelectedInput: (value: number) => void
@@ -140,7 +143,7 @@ function DivinationForm({ ruleSystem, setRuleSystem, question, setQuestion, inpu
     <label className="field-label" htmlFor="question">所问事项 <span>（可选）</span></label>
     <input className="text-input" id="question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="例如：今天适合推进这件事吗？" />
     <div className="mode-tabs" role="tablist" aria-label="起课方式"><button type="button" role="tab" aria-selected={inputMode === 'number'} className={inputMode === 'number' ? 'mode-tab is-active' : 'mode-tab'} onClick={() => setInputMode('number')}>任意三数</button><button type="button" role="tab" aria-selected={inputMode === 'character'} className={inputMode === 'character' ? 'mode-tab is-active' : 'mode-tab'} onClick={() => setInputMode('character')}>任意三字</button></div>
-    {inputMode === 'number' ? <><div className="numbers-grid">{inputs.map((value, index) => <div className={selectedInput === index ? 'number-field is-selected' : 'number-field'} key={index}><label className="field-label" htmlFor={`number-${index}`}>第{index + 1}数</label><input className="text-input number-display" id={`number-${index}`} readOnly value={value} onClick={() => setSelectedInput(index)} onKeyDown={handleNumberInputKeyDown} onChange={(event) => updateInput(index, event.target.value)} aria-invalid={Boolean(errors[index])} aria-describedby={errors[index] ? `error-${index}` : undefined} />{errors[index] && <p className="error-text" id={`error-${index}`}>{errors[index]}</p>}</div>)}</div><div className="number-keypad" aria-label="应用内数字键盘"><div className="keypad-row">{['1', '2', '3', '4', '5'].map((key) => <button type="button" key={key} aria-label={`输入${key}`} onClick={() => handleNumberKey(key)}>{key}</button>)}</div><div className="keypad-row">{['6', '7', '8', '9', '0'].map((key) => <button type="button" key={key} aria-label={`输入${key}`} onClick={() => handleNumberKey(key)}>{key}</button>)}</div><div className="keypad-row"><button type="button" aria-label="退格" onClick={() => handleNumberKey('backspace')}>退格</button><button type="button" aria-label="清空" onClick={() => handleNumberKey('clear')}>清空</button><button type="button" aria-label={inputs.every((value) => /^[1-9][0-9]*$/.test(value)) ? '开始起课' : '下一项'} onClick={() => handleNumberKey('next')}>{inputs.every((value) => /^[1-9][0-9]*$/.test(value)) ? '开始起课' : '下一项'}</button></div></div></> : <CharacterConfirmation characterInput={characterInput} setCharacterInput={setCharacterInput} characterEntries={characterEntries} characterError={characterError} onConfirm={onConfirmCharacters} onEntriesChange={onCharacterEntriesChange} onSubmit={onSubmit} />}
+    {inputMode === 'number' ? <><div className="numbers-grid">{inputs.map((value, index) => <div className={selectedInput === index ? 'number-field is-selected' : 'number-field'} key={index}><label className="field-label" htmlFor={`number-${index}`}>第{index + 1}数</label><input className={`text-input number-display${retainedInputs[index] ? ' is-retained' : ''}`} id={`number-${index}`} readOnly value={value} onClick={() => { setSelectedInput(index); updateInput(index, '') }} onKeyDown={handleNumberInputKeyDown} onChange={(event) => updateInput(index, event.target.value)} aria-invalid={Boolean(errors[index])} aria-describedby={errors[index] ? `error-${index}` : undefined} />{errors[index] && <p className="error-text" id={`error-${index}`}>{errors[index]}</p>}</div>)}</div><div className="number-keypad" aria-label="应用内数字键盘"><div className="keypad-row">{['1', '2', '3', '4', '5'].map((key) => <button type="button" key={key} aria-label={`输入${key}`} onClick={() => handleNumberKey(key)}>{key}</button>)}</div><div className="keypad-row">{['6', '7', '8', '9', '0'].map((key) => <button type="button" key={key} aria-label={`输入${key}`} onClick={() => handleNumberKey(key)}>{key}</button>)}</div><div className="keypad-row"><button type="button" aria-label="退格" onClick={() => handleNumberKey('backspace')}>退格</button><button type="button" aria-label="清空" onClick={() => handleNumberKey('clear')}>清空</button><button type="button" aria-label={inputs.every((value) => /^[1-9][0-9]*$/.test(value)) ? '开始起课' : '下一项'} onClick={() => handleNumberKey('next')}>{inputs.every((value) => /^[1-9][0-9]*$/.test(value)) ? '开始起课' : '下一项'}</button></div></div></> : <CharacterConfirmation characterInput={characterInput} setCharacterInput={setCharacterInput} characterEntries={characterEntries} characterError={characterError} onConfirm={onConfirmCharacters} onEntriesChange={onCharacterEntriesChange} onSubmit={onSubmit} />}
   </section>
 }
 

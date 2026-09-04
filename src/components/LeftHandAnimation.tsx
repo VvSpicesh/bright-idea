@@ -4,24 +4,24 @@ import type { CalculationStep, Palace } from '../rules'
 export const LEFT_PALM_IMAGE = `${import.meta.env.BASE_URL}images/left-palm.png`
 
 export const SIX_HAND_POINTS = {
-  大安: { x: 38, y: 54, finger: 'index', segment: 'lower' },
-  留连: { x: 38, y: 29, finger: 'index', segment: 'upper' },
-  速喜: { x: 50, y: 24, finger: 'middle', segment: 'upper' },
-  赤口: { x: 63, y: 29, finger: 'ring', segment: 'upper' },
-  小吉: { x: 63, y: 54, finger: 'ring', segment: 'lower' },
-  空亡: { x: 50, y: 54, finger: 'middle', segment: 'lower' },
+  大安: { x: 36, y: 41, finger: 'index', segment: 'lower' },
+  留连: { x: 36, y: 22, finger: 'index', segment: 'upper' },
+  速喜: { x: 53, y: 14, finger: 'middle', segment: 'upper' },
+  赤口: { x: 70, y: 22, finger: 'ring', segment: 'upper' },
+  小吉: { x: 70, y: 43, finger: 'ring', segment: 'lower' },
+  空亡: { x: 53, y: 40, finger: 'middle', segment: 'lower' },
 } as const
 
 export const NINE_HAND_POINTS = {
-  大安: { x: 38, y: 42, finger: 'index', segment: 'middle' },
-  留连: { x: 38, y: 29, finger: 'index', segment: 'upper' },
-  速喜: { x: 50, y: 24, finger: 'middle', segment: 'upper' },
-  赤口: { x: 63, y: 42, finger: 'ring', segment: 'middle' },
-  小吉: { x: 50, y: 54, finger: 'middle', segment: 'lower' },
-  空亡: { x: 50, y: 41, finger: 'middle', segment: 'middle' },
-  病符: { x: 63, y: 29, finger: 'ring', segment: 'upper' },
-  桃花: { x: 38, y: 54, finger: 'index', segment: 'lower' },
-  天德: { x: 63, y: 54, finger: 'ring', segment: 'lower' },
+  留连: { x: 36, y: 22, finger: 'index', segment: 'upper' },
+  大安: { x: 36, y: 31, finger: 'index', segment: 'middle' },
+  桃花: { x: 36, y: 41, finger: 'index', segment: 'lower' },
+  速喜: { x: 53, y: 14, finger: 'middle', segment: 'upper' },
+  空亡: { x: 53, y: 27, finger: 'middle', segment: 'middle' },
+  小吉: { x: 53, y: 40, finger: 'middle', segment: 'lower' },
+  病符: { x: 70, y: 22, finger: 'ring', segment: 'upper' },
+  赤口: { x: 70, y: 33, finger: 'ring', segment: 'middle' },
+  天德: { x: 70, y: 43, finger: 'ring', segment: 'lower' },
 } as const
 
 export const HAND_PALACE_ORDER = ['大安', '留连', '速喜', '赤口', '小吉', '空亡', '病符', '桃花', '天德'] as const
@@ -102,7 +102,7 @@ export function LeftHandAnimation({ steps, passes, palaceCount }: { steps: reado
           const point = points[name as keyof HandPoints]
           return <span className="palace-point" key={name} style={{ left: `${point.x}%`, top: `${point.y}%` }}>{name}</span>
         })}
-        {activePoint && <span className="active-marker-position" style={{ transform: `translate(${activePoint.x}%, ${activePoint.y}%)` }}><span className="active-marker" /></span>}
+        {activePoint && <span className="active-marker-position" style={{ left: `${activePoint.x}%`, top: `${activePoint.y}%` }}><span className="active-marker" /></span>}
       </div>
     </div>
     <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => showPass(index)} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong>{completed > index || reducedMotion ? palace.name : '待落宫'}</button>)}</div>
