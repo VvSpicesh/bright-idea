@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import leftPalmImage from '../assets/left-palm.png'
 import type { CalculationStep, Palace } from '../rules'
 
-export const LEFT_PALM_IMAGE = `${import.meta.env.BASE_URL}images/left-palm.png`
+export const LEFT_PALM_IMAGE = leftPalmImage
+
 
 export const SIX_HAND_POINTS = {
   大安: { x: 36, y: 41, finger: 'index', segment: 'lower' },
@@ -96,7 +98,7 @@ export function LeftHandAnimation({ steps, passes, palaceCount }: { steps: reado
   return <section className="hand-animation" aria-labelledby="hand-animation-title">
     <div className="animation-heading"><div><p className="pass-label">掌诀演示</p><h3 id="hand-animation-title">三传落宫</h3></div><div className="animation-actions"><button className="text-button" type="button" onClick={finishImmediately}>跳过动画</button><button className="text-button" type="button" onClick={play}>重新播放</button></div></div>
     <div className="hand-stage" role="img" aria-label={description}>
-      <img className="hand-image" src={LEFT_PALM_IMAGE} alt="左手掌心，拇指在左侧，食指、中指、无名指和小指向上" />
+      <img className="hand-image" src={leftPalmImage} alt="左手掌心，拇指在左侧，食指、中指、无名指和小指向上" />
       <div className="palace-layer" aria-hidden="true">
         {HAND_PALACE_ORDER.slice(0, palaceCount).map((name) => {
           const point = points[name as keyof HandPoints]
