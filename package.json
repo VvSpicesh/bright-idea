@@ -11,6 +11,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "opencc-js": "1.4.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "vite-plugin-pwa": "^1.0.2"
