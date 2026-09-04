@@ -60,7 +60,7 @@ h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-hei
 .crease-line, .finger-line { fill: none; stroke: #a77b66; stroke-width: 1.3; stroke-linecap: round; opacity: .75; }
 .palace-point circle { fill: #f4efe6; stroke: #1f6f5b; stroke-width: 1.8; }
 .palace-point text { fill: #17332f; font-size: 8px; pointer-events: none; }
-.active-marker { pointer-events: none; transform-box: fill-box; transform-origin: center; transition: transform 400ms cubic-bezier(.22, .75, .25, 1); }
+.active-marker { pointer-events: none; transform-box: view-box; transform-origin: 0 0; transition: transform 400ms cubic-bezier(.22, .75, .25, 1); }
 .active-marker > circle { fill: none; stroke: #c25735; stroke-width: 3; filter: drop-shadow(0 0 5px #c25735); }
 .active-marker .active-core { stroke-width: 2; animation: pulse-marker 450ms cubic-bezier(.22, .75, .25, 1); }
 .pass-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }

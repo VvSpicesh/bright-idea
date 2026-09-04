@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, act } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { calculateThreePasses, classicSixRules } from '../rules'
+import { calculateThreePasses, classicSixRules, xunNineRules } from '../rules'
+import { getAnimationPath } from './LeftHandAnimation'
 import { LeftHandAnimation } from './LeftHandAnimation'
 
 const result = calculateThreePasses(classicSixRules, [1n, 2n, 3n])
@@ -38,5 +39,13 @@ describe('左手掐诀播放控制', () => {
     render(<LeftHandAnimation {...props} />)
     expect(screen.getByRole('img', { name: /掐诀动画已跳过/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /末传\s*赤口/ })).toBeInTheDocument()
+  })
+
+  it('keeps the documented nine-palace 7, 2, 12 path anchored at each landing', () => {
+    const nine = calculateThreePasses(xunNineRules, [7n, 2n, 12n])
+    expect([nine.first.name, nine.second.name, nine.third.name]).toEqual(['病符', '桃花', '大安'])
+    expect(getAnimationPath(nine.steps[1], 9)).toEqual([6, 7])
+    expect(getAnimationPath(nine.steps[2], 9)).toEqual([7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0])
+    expect(getAnimationPath(nine.steps[2], 9).at(-1)).toBe(nine.steps[2].endIndex)
   })
 })
