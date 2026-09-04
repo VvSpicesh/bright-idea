@@ -3,25 +3,25 @@ import { getAnimationPath, getHandPoints, getPalaceJoint, NINE_HAND_POINTS, SIX_
 
 describe('左手掌诀映射与轨迹压缩', () => {
   it('maps all nine palaces to the specified finger joints', () => {
-    expect(Object.fromEntries(Object.entries(NINE_HAND_POINTS).map(([name, point]) => [name, `${point.finger}${point.section}`]))).toEqual({
-      大安: '食指中节', 留连: '食指上节', 速喜: '中指上节', 赤口: '无名指中节', 小吉: '中指下节', 空亡: '中指中节', 病符: '无名指上节', 桃花: '食指下节', 天德: '无名指下节',
+    expect(Object.fromEntries(Object.entries(NINE_HAND_POINTS).map(([name, point]) => [name, `${point.finger}.${point.segment}`]))).toEqual({
+      大安: 'index.middle', 留连: 'index.upper', 速喜: 'middle.upper', 赤口: 'ring.middle', 小吉: 'middle.lower', 空亡: 'middle.middle', 病符: 'ring.upper', 桃花: 'index.lower', 天德: 'ring.lower',
     })
   })
 
   it('keeps every palace on the three intended fingers and away from the palm', () => {
-    expect(Object.values(NINE_HAND_POINTS).every((point) => ['食指', '中指', '无名指'].includes(point.finger))).toBe(true)
-    expect(Object.values(NINE_HAND_POINTS).every((point) => point.y < 210 && point.x > 100 && point.x < 230)).toBe(true)
+    expect(Object.values(NINE_HAND_POINTS).every((point) => ['index', 'middle', 'ring'].includes(point.finger))).toBe(true)
+    expect(Object.values(NINE_HAND_POINTS).every((point) => point.y < 280 && point.x > 100 && point.x < 240)).toBe(true)
   })
 
   it('uses a separate six-point ring without middle finger joints', () => {
     expect(getHandPoints(6)).toBe(SIX_HAND_POINTS)
     expect(Object.keys(SIX_HAND_POINTS)).toEqual(['大安', '留连', '速喜', '赤口', '小吉', '空亡'])
-    expect(Object.values(SIX_HAND_POINTS).map((point) => point.section)).not.toContain('中节' as never)
+    expect(Object.values(SIX_HAND_POINTS).map((point) => point.segment)).not.toContain('middle' as never)
   })
 
   it('starts each remainder path at the previous landing palace', () => {
     expect(getAnimationPath({ startIndex: 2, input: '5', rounds: '0', remainder: '4', endIndex: 0 }, 6)).toEqual([2, 3, 4, 5, 0])
-    expect(getPalaceJoint('天德')?.finger).toBe('无名指')
+    expect(getPalaceJoint('天德')?.finger).toBe('ring')
   })
 
   it('compresses huge full circles to one remainder path', () => {
@@ -35,5 +35,12 @@ describe('左手掌诀映射与轨迹压缩', () => {
     expect(path).toHaveLength(12)
     expect(path[0]).toBe(7)
     expect(path.at(-1)).toBe(step.endIndex)
+  })
+
+  it('keeps all four upright fingers visible and places no palace on the little finger', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    expect(['index-finger', 'middle-finger', 'ring-finger', 'little-finger'].every((className) => className.length > 0)).toBe(true)
+    expect(Object.values(NINE_HAND_POINTS).some((point) => (point.finger as string) === 'little')).toBe(false)
+    expect(svg).toBeInstanceOf(SVGSVGElement)
   })
 })

@@ -13,6 +13,12 @@ describe('左手掐诀播放控制', () => {
   it('plays the three passes in order and moves through multiple configured coordinates', () => {
     vi.useFakeTimers()
     const { container } = render(<LeftHandAnimation {...props} />)
+    expect(container.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 360 480')
+    expect(container.querySelectorAll('.palace-point')).toHaveLength(6)
+    expect(container.querySelector('.index-finger')).toBeInTheDocument()
+    expect(container.querySelector('.middle-finger')).toBeInTheDocument()
+    expect(container.querySelector('.ring-finger')).toBeInTheDocument()
+    expect(container.querySelector('.little-finger')).toBeInTheDocument()
     expect(screen.getByText('初传').nextSibling).toHaveTextContent('待落宫')
     act(() => { vi.advanceTimersByTime(1500) })
     expect(screen.getByRole('button', { name: /初传\s*大安/ })).toBeInTheDocument()
