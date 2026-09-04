@@ -9,6 +9,12 @@ npm install
 npm run dev
 ```
 
+## GitHub Pages
+
+公网地址：<https://vvspicesh.github.io/bright-idea/>
+
+推送到 `main` 会自动运行 GitHub Actions，完成检查、构建并发布到 GitHub Pages。也可以在 GitHub 网页的 **Actions → Deploy Pages → Run workflow** 手工触发。
+
 ## 验证
 
 ```bash
