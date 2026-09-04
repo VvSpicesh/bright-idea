@@ -48,10 +48,27 @@ h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-hei
 .pass-card p { margin: 4px 0; color: #536b64; font-size: .85rem; }
 .pass-label { color: #c25735 !important; font-weight: 600; }
 .keywords { line-height: 1.5; }
-.trace-title { margin: 26px 0 10px; font-family: 'Noto Serif SC', 'SimSun', serif; }
-.trace-list { display: grid; gap: 10px; margin: 0 0 4px; padding: 0; list-style: none; }
-.trace-list li { display: flex; gap: 10px; padding: 10px; background: #eee5d8; line-height: 1.5; }
-.trace-list strong { flex: 0 0 36px; color: #1f6f5b; }
+.hand-animation { margin-top: 26px; padding-top: 18px; border-top: 1px solid #d9cbb5; }
+.animation-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.animation-heading h3 { margin: 4px 0 0; font-family: 'Noto Serif SC', 'SimSun', serif; }
+.animation-actions { display: flex; gap: 8px; }
+.text-button { min-height: 40px; padding: 6px 8px; border: 1px solid #c25735; border-radius: 4px; color: #a4462b; background: transparent; cursor: pointer; }
+.text-button:hover, .text-button:focus-visible { background: #f5e4d8; }
+.hand-svg { display: block; width: min(100%, 330px); height: auto; margin: 8px auto 0; overflow: visible; }
+.hand-palm, .hand-thumb { fill: #d7a77d; stroke: #874f3c; stroke-width: 2; }
+.joint circle { fill: #f4efe6; stroke: #1f6f5b; stroke-width: 2; }
+.joint text { fill: #17332f; font-size: 8px; pointer-events: none; }
+.joint.is-active circle { fill: #c25735; stroke: #fffdf8; stroke-width: 3; filter: drop-shadow(0 0 7px #c25735); }
+.joint.is-active text { fill: #fff; font-weight: 700; }
+.joint.is-complete circle { fill: #dcebdc; }
+.pointer-light { fill: none; stroke: #c25735; stroke-width: 3; opacity: .8; animation: pulse-light .7s ease-in-out infinite alternate; }
+.pointer-line { stroke: #c25735; stroke-width: 2; stroke-dasharray: 5 4; opacity: .8; }
+.pass-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pass-result { display: grid; gap: 4px; padding: 9px; border: 1px solid #d9cbb5; color: #806f5c; font-size: .9rem; text-align: center; font: inherit; cursor: pointer; }
+.pass-result strong { color: #1f6f5b; font-size: .78rem; }
+.pass-result.is-done { border-color: #1f6f5b; color: #17332f; font-weight: 600; }
+.round-note { margin: 8px 0 0; color: #a4462b; font-size: .82rem; text-align: center; }
+@keyframes pulse-light { from { opacity: .45; transform: scale(.9); transform-origin: center; } to { opacity: 1; transform: scale(1.08); transform-origin: center; } }
 .status-panel { text-align: center; }
 .status-panel p { color: #536b64; }
 .confirm-button { margin-top: 18px; }
@@ -87,7 +104,11 @@ h2 { margin: 0 0 8px; font-size: 1.35rem; }
   .text-input { border-color: #53685f; color: #edf3eb; background: #20342f; }
   .source-line { border-color: #455b51; }
   .pass-card { border-color: #455b51; background: rgba(24, 42, 39, .5); }
-  .trace-list li { background: #2a4039; }
+  .hand-animation { border-color: #455b51; }
+  .hand-palm, .hand-thumb { fill: #b98265; stroke: #e3b39a; }
+  .joint circle { fill: #20342f; }
+  .joint text { fill: #edf3eb; }
+  .pass-result { border-color: #455b51; }
   .mode-tabs { background: #30463e; }
   .character-row { border-color: #455b51; }
   .character-row > span, .character-row > div span, .character-row label, .data-note, .character-result { color: #b4c5bc; }
@@ -97,5 +118,6 @@ h2 { margin: 0 0 8px; font-size: 1.35rem; }
   .nav-item { color: #9caea5; }
   .nav-item:hover, .nav-item:focus-visible { background: #30463e; }
 }
-@media (max-width: 560px) { .section-heading, .result-header { align-items: flex-start; } .result-header { flex-direction: column; } .passes { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .pointer-light { animation: none; } }
+@media (max-width: 560px) { .section-heading, .result-header, .animation-heading { align-items: flex-start; } .result-header { flex-direction: column; } .animation-heading { flex-direction: column; } .passes { grid-template-columns: 1fr; } }
 @media (max-width: 380px) { .main-content { padding-right: 16px; padding-left: 16px; } .nav-item { min-width: 82px; } .form-panel, .result-panel, .status-panel { padding-right: 14px; padding-left: 14px; } }
