@@ -1,8 +1,7 @@
 import { fireEvent, render, screen, act } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { calculateThreePasses, classicSixRules, xunNineRules } from '../rules'
-import { getAnimationPath } from './LeftHandAnimation'
-import { LeftHandAnimation } from './LeftHandAnimation'
+import { getAnimationPath, LEFT_PALM_IMAGE, LeftHandAnimation } from './LeftHandAnimation'
 
 const result = calculateThreePasses(classicSixRules, [1n, 2n, 3n])
 const props = { steps: result.steps, passes: [result.first, result.second, result.third] as const, palaceCount: 6 }
@@ -13,20 +12,18 @@ describe('左手掐诀播放控制', () => {
   it('plays the three passes in order and moves through multiple configured coordinates', () => {
     vi.useFakeTimers()
     const { container } = render(<LeftHandAnimation {...props} />)
-    expect(container.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 360 480')
+    expect(container.querySelector('img.hand-image')?.getAttribute('src')).toBe(LEFT_PALM_IMAGE)
+    expect(container.querySelector('img.hand-image')?.getAttribute('alt')).toContain('左手掌心')
     expect(container.querySelectorAll('.palace-point')).toHaveLength(6)
-    expect(container.querySelector('.index-finger')).toBeInTheDocument()
-    expect(container.querySelector('.middle-finger')).toBeInTheDocument()
-    expect(container.querySelector('.ring-finger')).toBeInTheDocument()
-    expect(container.querySelector('.little-finger')).toBeInTheDocument()
+    expect(container.querySelector('.hand-stage')).toBeInTheDocument()
     expect(screen.getByText('初传').nextSibling).toHaveTextContent('待落宫')
     act(() => { vi.advanceTimersByTime(1500) })
     expect(screen.getByRole('button', { name: /初传\s*大安/ })).toBeInTheDocument()
     expect(container.querySelectorAll('.active-marker')).toHaveLength(1)
-    const firstTransform = container.querySelector('.active-marker')?.getAttribute('style')
+    const firstTransform = container.querySelector('.active-marker-position')?.getAttribute('style')
     act(() => { vi.advanceTimersByTime(2000) })
     expect(screen.getByRole('button', { name: /中传\s*留连/ })).toBeInTheDocument()
-    expect(container.querySelector('.active-marker')?.getAttribute('style')).not.toBe(firstTransform)
+    expect(container.querySelector('.active-marker-position')?.getAttribute('style')).not.toBe(firstTransform)
     act(() => { vi.advanceTimersByTime(1300) })
     expect(screen.getByRole('button', { name: /末传\s*赤口/ })).toBeInTheDocument()
   })

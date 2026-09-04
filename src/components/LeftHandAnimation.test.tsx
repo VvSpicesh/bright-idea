@@ -10,7 +10,7 @@ describe('左手掌诀映射与轨迹压缩', () => {
 
   it('keeps every palace on the three intended fingers and away from the palm', () => {
     expect(Object.values(NINE_HAND_POINTS).every((point) => ['index', 'middle', 'ring'].includes(point.finger))).toBe(true)
-    expect(Object.values(NINE_HAND_POINTS).every((point) => point.y < 280 && point.x > 100 && point.x < 240)).toBe(true)
+    expect(Object.values(NINE_HAND_POINTS).every((point) => point.y < 56 && point.x > 35 && point.x < 66)).toBe(true)
   })
 
   it('uses a separate six-point ring without middle finger joints', () => {
@@ -37,10 +37,7 @@ describe('左手掌诀映射与轨迹压缩', () => {
     expect(path.at(-1)).toBe(step.endIndex)
   })
 
-  it('keeps all four upright fingers visible and places no palace on the little finger', () => {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    expect(['index-finger', 'middle-finger', 'ring-finger', 'little-finger'].every((className) => className.length > 0)).toBe(true)
+  it('keeps the existing hand image and places no palace on the little finger', () => {
     expect(Object.values(NINE_HAND_POINTS).some((point) => (point.finger as string) === 'little')).toBe(false)
-    expect(svg).toBeInstanceOf(SVGSVGElement)
   })
 })
