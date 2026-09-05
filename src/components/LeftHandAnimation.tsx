@@ -58,7 +58,7 @@ function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
 }
 
-export function LeftHandAnimation({ steps, passes, palaceCount }: { steps: readonly [CalculationStep, CalculationStep, CalculationStep]; passes: readonly [Palace, Palace, Palace]; palaceCount: number }) {
+export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange }: { steps: readonly [CalculationStep, CalculationStep, CalculationStep]; passes: readonly [Palace, Palace, Palace]; palaceCount: number; onCompleteChange?: (complete: boolean) => void }) {
   const points = getHandPoints(palaceCount)
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [activePass, setActivePass] = useState<number | null>(null)
@@ -66,12 +66,20 @@ export function LeftHandAnimation({ steps, passes, palaceCount }: { steps: reado
   const [playing, setPlaying] = useState(true)
   const [reducedMotion] = useState(prefersReducedMotion)
 
-  const finishImmediately = () => { setPlaying(false); setActiveIndex(passes[2].index); setActivePass(2); setCompleted(3) }
-  const play = () => { setPlaying(true); setActiveIndex(null); setActivePass(null); setCompleted(0) }
+  const finishImmediately = () => { setPlaying(false); setActiveIndex(passes[2].index); setActivePass(2); setCompleted(3); onCompleteChange?.(true) }
+  const play = () => { setPlaying(true); setActiveIndex(null); setActivePass(null); setCompleted(0); onCompleteChange?.(false) }
   const showPass = (index: number) => { setPlaying(false); setActiveIndex(passes[index].index); setActivePass(index); setCompleted(Math.max(completed, index + 1)) }
 
   useEffect(() => {
-    if (reducedMotion || !playing) return
+    if (reducedMotion) {
+      setPlaying(false)
+      setActiveIndex(passes[2].index)
+      setActivePass(2)
+      setCompleted(3)
+      onCompleteChange?.(true)
+      return
+    }
+    if (!playing) return
     let cancelled = false
     const timers: ReturnType<typeof globalThis.setTimeout>[] = []
     let elapsed = 120
@@ -83,9 +91,9 @@ export function LeftHandAnimation({ steps, passes, palaceCount }: { steps: reado
       timers.push(globalThis.setTimeout(() => { if (!cancelled) setCompleted(index + 1) }, elapsed))
       elapsed += 500
     })
-    timers.push(globalThis.setTimeout(() => { if (!cancelled) setPlaying(false) }, elapsed))
+    timers.push(globalThis.setTimeout(() => { if (!cancelled) { setPlaying(false); onCompleteChange?.(true) } }, elapsed))
     return () => { cancelled = true; timers.forEach(globalThis.clearTimeout) }
-  }, [palaceCount, playing, reducedMotion, steps])
+  }, [onCompleteChange, palaceCount, passes, playing, reducedMotion, steps])
 
   const activeName = activeIndex === null ? undefined : HAND_PALACE_ORDER[activeIndex]
   const activePoint = activeName ? points[activeName as keyof HandPoints] : undefined
@@ -105,7 +113,7 @@ export function LeftHandAnimation({ steps, passes, palaceCount }: { steps: reado
         {activePoint && <span className="active-marker-position" style={{ left: `${activePoint.x}%`, top: `${activePoint.y}%` }}><span className="active-marker" /></span>}
       </div>
     </div>
-    <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => showPass(index)} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong>{completed > index || reducedMotion ? palace.name : '待落宫'}</button>)}</div>
+    <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => showPass(index)} disabled={completed <= index} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong>{completed > index ? palace.name : '待落宫'}</button>)}</div>
     {playing && activePass !== null && Number(steps[activePass].rounds) > 0 && <p className="round-note">完整圈 ×{steps[activePass].rounds}圈，再走余数路径</p>}
   </section>
 }

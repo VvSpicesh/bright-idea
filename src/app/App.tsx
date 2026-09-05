@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { calculateThreePasses, classicSixRules, xunNineRules } from '../rules'
 import type { DivinationResult, RuleSystem } from '../rules'
@@ -6,6 +6,8 @@ import { isParsedNumber, parsePositiveInteger } from '../features/divination/num
 import { createCharacterEntries, lookupStrokeCount, STROKE_DATA_SOURCE, STROKE_DATA_VERSION, validateCharacters } from '../features/divination/characterInput'
 import type { CharacterEntry } from '../features/divination/characterInput'
 import { LeftHandAnimation } from '../components/LeftHandAnimation'
+import { DivinationInterpretation } from '../components/DivinationInterpretation'
+import { LocalGeminiInterpretation } from '../components/LocalGeminiInterpretation'
 
 type Section = '起课' | '记录' | '规则'
 type InputMode = 'number' | 'character'
@@ -164,11 +166,23 @@ function CharacterConfirmation({ characterInput, setCharacterInput, characterEnt
 function ResultView({ result, question, characterEntries, onBack }: { result: DivinationResult; question: string; characterEntries: CharacterEntry[] | null; onBack: () => void }) {
   const passes = [result.first, result.second, result.third] as const
   const labels = ['初传', '中传', '末传']
+  const [animationComplete, setAnimationComplete] = useState(false)
+  const handleAnimationCompleteChange = useCallback((complete: boolean) => setAnimationComplete(complete), [])
   return <section className="result-panel" aria-labelledby="result-title">
     <div className="result-header"><div><p className="eyebrow">起课结果</p><h2 id="result-title">{question || '未填写事项'}</h2><p className="result-summary">{result.ruleSystemId === 'classic-six' ? '六宫' : '九宫'} · {characterEntries ? '三字起课' : '三数起课'} · {result.inputs.join('、')}</p></div><button className="secondary-button" type="button" onClick={onBack}>重新起课</button></div>
     <p className="result-meta">{result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）'} · 规则版本 {result.ruleVersion}</p>
     {characterEntries ? <><p className="source-line">原始三字：{characterEntries.map((entry) => entry.original).join('')}<br />转换后的繁体三字：{characterEntries.map((entry) => entry.traditional).join('')}</p><div className="character-result">{characterEntries.map((entry) => <span key={entry.original}>{entry.original} → {entry.traditional}：数据 {entry.dataStrokeCount ?? '未找到'}，最终 {entry.finalStrokeCount}</span>)}</div><p className="data-note">笔画来源：{STROKE_DATA_SOURCE} · {STROKE_DATA_VERSION}</p></> : <p className="source-line">原始数字：{result.inputs.join('、')}</p>}
-    <div className="passes">{passes.map((palace, index) => <article className="pass-card" key={labels[index]}><p className="pass-label">{labels[index]}</p><h3>{palace.name}</h3><p>{palace.element} · {palace.direction || '方位未设定'}</p><p className="keywords">{palace.keywords.join('、')}</p></article>)}</div>
-    <LeftHandAnimation steps={result.steps} passes={passes} palaceCount={result.ruleSystemId === 'classic-six' ? 6 : 9} />
+    <LeftHandAnimation steps={result.steps} passes={passes} palaceCount={result.ruleSystemId === 'classic-six' ? 6 : 9} onCompleteChange={handleAnimationCompleteChange} />
+    {animationComplete && <div className="revealed-result">
+      <div className="passes">{passes.map((palace, index) => <article className="pass-card" key={labels[index]}><p className="pass-label">{labels[index]}</p><h3>{palace.name}</h3><p>{palace.element} · {palace.direction || '方位未设定'}</p><p className="keywords">{palace.keywords.join('、')}</p></article>)}</div>
+      <DivinationInterpretation passes={passes} />
+      <LocalGeminiInterpretation context={{
+        question: question || '未填写事项',
+        systemName: result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）',
+        inputMethod: characterEntries ? '三字起课' : '三数起课',
+        originalInput: characterEntries ? characterEntries.map((entry) => entry.original).join('') : result.inputs.join('、'),
+        passes,
+      }} />
+    </div>}
   </section>
 }
