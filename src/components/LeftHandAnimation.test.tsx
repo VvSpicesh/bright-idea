@@ -8,9 +8,14 @@ describe('左手掌诀映射与轨迹压缩', () => {
     })
   })
 
-  it('keeps every palace on the three intended fingers and away from the palm', () => {
-    expect(Object.values(NINE_HAND_POINTS).every((point) => ['index', 'middle', 'ring'].includes(point.finger))).toBe(true)
-    expect(Object.values(NINE_HAND_POINTS).every((point) => point.y < 56 && point.x > 35 && point.x < 66)).toBe(true)
+  it('uses the current six-palace and nine-palace coordinates on the three intended fingers', () => {
+    expect(Object.fromEntries(Object.entries(SIX_HAND_POINTS).map(([name, point]) => [name, [point.x, point.y]]))).toEqual({
+      大安: [36, 41], 留连: [36, 22], 速喜: [53, 14], 赤口: [70, 22], 小吉: [70, 43], 空亡: [53, 40],
+    })
+    expect(Object.fromEntries(Object.entries(NINE_HAND_POINTS).map(([name, point]) => [name, [point.x, point.y]]))).toEqual({
+      留连: [36, 22], 大安: [36, 31], 桃花: [36, 41], 速喜: [53, 14], 空亡: [53, 27], 小吉: [53, 40], 病符: [70, 22], 赤口: [70, 33], 天德: [70, 43],
+    })
+    expect(new Set([...Object.values(SIX_HAND_POINTS), ...Object.values(NINE_HAND_POINTS)].map((point) => point.finger))).toEqual(new Set(['index', 'middle', 'ring']))
   })
 
   it('uses a separate six-point ring without middle finger joints', () => {
