@@ -241,6 +241,12 @@ function CharacterConfirmation({ characterInput, setCharacterInput, characterEnt
 
 function ResultView({ result, question, source, onBack, onRandomize }: { result: DivinationResult; question: string; source: ResultSource; onBack: () => void; onRandomize: () => void }) {
   const passes = [result.first, result.second, result.third] as const
+  const resultIdentityRef = useRef(result)
+  const resultRunIdRef = useRef(0)
+  if (resultIdentityRef.current !== result) {
+    resultIdentityRef.current = result
+    resultRunIdRef.current += 1
+  }
   const labels = ['初传', '中传', '末传']
   const [animationComplete, setAnimationComplete] = useState(false)
   const [completedPasses, setCompletedPasses] = useState(0)
@@ -262,7 +268,7 @@ function ResultView({ result, question, source, onBack, onRandomize }: { result:
           <div className="result-header"><div><p className="eyebrow">起课结果</p><h2 id="result-title">{question || '未填写事项'}</h2><p className="result-summary">{result.ruleSystemId === 'classic-six' ? '六宫' : '九宫'} · {inputMethod} · {result.inputs.join('、')}</p></div><div className="result-actions"><button className="secondary-button" type="button" onClick={onBack}>重新起课</button>{source.method === 'random' && <button className="text-button compact-button" type="button" onClick={onRandomize}>换一组</button>}</div></div>
           <p className="result-meta">{result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）'} · 规则版本 {result.ruleVersion}</p>
           {source.method === 'character' ? <><p className="source-line">原始三字：{source.entries.map((entry) => entry.original).join('')}<br />转换后的繁体三字：{source.entries.map((entry) => entry.traditional).join('')}</p><div className="character-result">{source.entries.map((entry) => <span key={entry.original}>{entry.original} → {entry.traditional}：数据 {entry.dataStrokeCount ?? '未找到'}，最终 {entry.finalStrokeCount}</span>)}</div><p className="data-note">笔画来源：{STROKE_DATA_SOURCE} · {STROKE_DATA_VERSION}</p></> : source.method === 'time' ? <p className="source-line">公历时间：{source.values.solarText}<br />农历日期：{source.values.lunarText} · 时辰：{source.values.shichenName}<br />原始数字：{result.inputs.join('、')}</p> : source.method === 'random' ? <p className="source-line">随机三数：{result.inputs.join('、')}</p> : <p className="source-line">原始数字：{result.inputs.join('、')}</p>}
-          <LeftHandAnimation key={`${result.ruleSystemId}-${result.inputs.join('-')}`} steps={result.steps} passes={passes} palaceCount={result.ruleSystemId === 'classic-six' ? 6 : 9} onCompleteChange={handleAnimationCompleteChange} hidePassResults onCompletedChange={handleCompletedChange} onPassSelectReady={handlePassSelectReady} />
+          <LeftHandAnimation key={`${result.ruleSystemId}-${result.inputs.join('-')}`} runId={resultRunIdRef.current} steps={result.steps} passes={passes} palaceCount={result.ruleSystemId === 'classic-six' ? 6 : 9} onCompleteChange={handleAnimationCompleteChange} hidePassResults onCompletedChange={handleCompletedChange} onPassSelectReady={handlePassSelectReady} />
         </div>
         <PassResults passes={passes} completed={completedPasses} onSelect={handlePassSelect} />
       </div>

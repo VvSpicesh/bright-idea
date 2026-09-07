@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CalculationStep, Palace } from '../rules'
 
 export const LEFT_PALM_IMAGE = `${import.meta.env.BASE_URL}images/left-palm.png`
@@ -93,9 +93,30 @@ export function PassResults({ passes, completed, onSelect }: { passes: readonly 
   return <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => onSelect(index)} disabled={completed <= index} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong>{completed > index ? palace.name : '待落宫'}</button>)}</div>
 }
 
-export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange, hidePassResults = false, onCompletedChange, onPassSelectReady }: { steps: readonly [CalculationStep, CalculationStep, CalculationStep]; passes: readonly [Palace, Palace, Palace]; palaceCount: number; onCompleteChange?: (complete: boolean) => void; hidePassResults?: boolean; onCompletedChange?: (completed: number) => void; onPassSelectReady?: (select: (index: number) => void) => void }) {
+export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange, hidePassResults = false, onCompletedChange, onPassSelectReady, runId = 0 }: { steps: readonly [CalculationStep, CalculationStep, CalculationStep]; passes: readonly [Palace, Palace, Palace]; palaceCount: number; onCompleteChange?: (complete: boolean) => void; hidePassResults?: boolean; onCompletedChange?: (completed: number) => void; onPassSelectReady?: (select: (index: number) => void) => void; runId?: number }) {
   const points = getHandPoints(palaceCount)
-  const timing = getAnimationTiming(steps, palaceCount)
+  const animationPlan = useMemo(() => {
+    const paths = steps.map((step) => getAnimationPath(step, palaceCount)) as [number[], number[], number[]]
+    return { paths, timing: getAnimationTiming(steps, palaceCount) }
+  }, [
+    palaceCount,
+    steps[0].startIndex,
+    steps[0].input,
+    steps[0].rounds,
+    steps[0].remainder,
+    steps[0].endIndex,
+    steps[1].startIndex,
+    steps[1].input,
+    steps[1].rounds,
+    steps[1].remainder,
+    steps[1].endIndex,
+    steps[2].startIndex,
+    steps[2].input,
+    steps[2].rounds,
+    steps[2].remainder,
+    steps[2].endIndex,
+  ])
+  const timing = animationPlan.timing
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [activePass, setActivePass] = useState<number | null>(null)
   const [trails, setTrails] = useState<Array<{ id: number; palaceIndex: number }>>([])
@@ -104,55 +125,121 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
   const [playbackRun, setPlaybackRun] = useState(0)
   const [reducedMotion] = useState(prefersReducedMotion)
   const trailId = useRef(0)
+  const animationRunId = useRef(0)
+  const timersRef = useRef<ReturnType<typeof globalThis.setTimeout>[]>([])
+  const onCompleteRef = useRef(onCompleteChange)
+  const onCompletedRef = useRef(onCompletedChange)
+  onCompleteRef.current = onCompleteChange
+  onCompletedRef.current = onCompletedChange
 
-  const finishImmediately = () => { setPlaying(false); setTrails([]); setActiveIndex(passes[2].index); setActivePass(2); setCompleted(3); onCompleteChange?.(true) }
-  const play = () => { setPlaybackRun((run) => run + 1); setPlaying(true); setTrails([]); setActiveIndex(null); setActivePass(null); setCompleted(0); onCompleteChange?.(false) }
-  const showPass = (index: number) => { setPlaying(false); setTrails([]); setActiveIndex(passes[index].index); setActivePass(index); setCompleted((current) => Math.max(current, index + 1)) }
+  const clearTimers = () => {
+    timersRef.current.forEach((timer) => globalThis.clearTimeout(timer))
+    timersRef.current = []
+  }
+  const invalidateRun = () => {
+    animationRunId.current += 1
+    clearTimers()
+  }
+
+  const finishImmediately = () => {
+    invalidateRun()
+    setPlaying(false)
+    setTrails([])
+    setActiveIndex(passes[2].index)
+    setActivePass(2)
+    setCompleted(3)
+    onCompleteRef.current?.(true)
+  }
+  const play = () => {
+    invalidateRun()
+    setPlaybackRun((run) => run + 1)
+    setPlaying(true)
+    setTrails([])
+    setActiveIndex(null)
+    setActivePass(null)
+    setCompleted(0)
+    onCompleteRef.current?.(false)
+  }
+  const showPass = (index: number) => {
+    invalidateRun()
+    setPlaying(false)
+    setTrails([])
+    setActiveIndex(passes[index].index)
+    setActivePass(index)
+    setCompleted((current) => Math.max(current, index + 1))
+  }
   const showPassRef = useRef(showPass)
   showPassRef.current = showPass
+  const lastPassIndex = passes[2].index
 
   useEffect(() => { onPassSelectReady?.((index) => showPassRef.current(index)) }, [onPassSelectReady])
-  useEffect(() => { onCompletedChange?.(completed) }, [completed, onCompletedChange])
+  useEffect(() => { onCompletedRef.current?.(completed) }, [completed])
 
   useEffect(() => {
+    const activeRunId = animationRunId.current + 1
+    animationRunId.current = activeRunId
+    clearTimers()
+    setPlaying(true)
+    setTrails([])
+    setActiveIndex(null)
+    setActivePass(null)
+    setCompleted(0)
+
     if (reducedMotion) {
       setPlaying(false)
       setTrails([])
-      setActiveIndex(passes[2].index)
+      setActiveIndex(lastPassIndex)
       setActivePass(2)
       setCompleted(3)
-      onCompleteChange?.(true)
-      return
+      onCompleteRef.current?.(true)
+      return () => {
+        if (animationRunId.current === activeRunId) {
+          animationRunId.current += 1
+          clearTimers()
+        }
+      }
     }
-    if (!playing) return
-    let cancelled = false
-    const timers: ReturnType<typeof globalThis.setTimeout>[] = []
+
+    const schedule = (callback: () => void, delay: number) => {
+      const timer = globalThis.setTimeout(() => {
+        if (animationRunId.current === activeRunId) callback()
+      }, delay)
+      timersRef.current.push(timer)
+    }
     let elapsed = INITIAL_DELAY_MS
-    steps.forEach((step, index) => {
-      getAnimationPath(step, palaceCount).forEach((palaceIndex) => {
-        timers.push(globalThis.setTimeout(() => {
-          if (cancelled) return
+    animationPlan.paths.forEach((path, index) => {
+      path.forEach((palaceIndex) => {
+        schedule(() => {
           setActivePass(index)
           setActiveIndex((previousIndex) => {
             if (previousIndex !== null && previousIndex !== palaceIndex) {
               const id = ++trailId.current
               setTrails((current) => [...current, { id, palaceIndex: previousIndex }].slice(-3))
-              timers.push(globalThis.setTimeout(() => {
-                if (!cancelled) setTrails((current) => current.filter((trail) => trail.id !== id))
-              }, TRAIL_LIFETIME_MS))
+              schedule(() => setTrails((current) => current.filter((trail) => trail.id !== id)), TRAIL_LIFETIME_MS)
             }
             return palaceIndex
           })
-        }, elapsed))
-        elapsed += timing.stepDurationMs
+        }, elapsed)
+        elapsed += animationPlan.timing.stepDurationMs
       })
-      timers.push(globalThis.setTimeout(() => { if (!cancelled) setCompleted(index + 1) }, elapsed))
-      if (index < steps.length - 1) elapsed += timing.passPauseMs
+      schedule(() => setCompleted(index + 1), elapsed)
+      if (index < animationPlan.paths.length - 1) elapsed += animationPlan.timing.passPauseMs
     })
     elapsed += FINAL_SETTLE_MS
-    timers.push(globalThis.setTimeout(() => { if (!cancelled) { setPlaying(false); setTrails([]); onCompleteChange?.(true) } }, elapsed))
-    return () => { cancelled = true; timers.forEach(globalThis.clearTimeout) }
-  }, [onCompleteChange, palaceCount, passes, playbackRun, playing, reducedMotion, steps, timing.passPauseMs, timing.stepDurationMs])
+    schedule(() => {
+      animationRunId.current += 1
+      clearTimers()
+      setPlaying(false)
+      setTrails([])
+      onCompleteRef.current?.(true)
+    }, elapsed)
+    return () => {
+      if (animationRunId.current === activeRunId) {
+        animationRunId.current += 1
+        clearTimers()
+      }
+    }
+  }, [animationPlan, lastPassIndex, playbackRun, reducedMotion, runId])
 
   const activeName = activeIndex === null ? undefined : HAND_PALACE_ORDER[activeIndex]
   const activePoint = activeName ? points[activeName as keyof HandPoints] : undefined
