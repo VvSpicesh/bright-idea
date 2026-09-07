@@ -56,19 +56,25 @@ describe('AI 提示词导出', () => {
     expect(screen.getByLabelText('给AI的问题')).toHaveValue('')
   })
 
-  it('copies the current prompt before opening the selected AI site', async () => {
+  it.each([
+    ['ChatGPT', 'https://chatgpt.com/'],
+    ['Gemini', 'https://gemini.google.com/app'],
+    ['DeepSeek', 'https://chat.deepseek.com/'],
+    ['豆包', 'https://www.doubao.com/'],
+    ['Kimi', 'https://kimi.moonshot.cn/'],
+  ])('copies the current prompt before opening %s in a new window', async (name, url) => {
     const calls: string[] = []
     writeText.mockImplementation(async () => { calls.push('copy') })
     const open = vi.spyOn(window, 'open').mockImplementation(() => { calls.push('open'); return null })
     render(<LocalGeminiInterpretation context={context} />)
     fireEvent.change(screen.getByLabelText('给AI的问题'), { target: { value: '重点看合作风险' } })
 
-    fireEvent.click(screen.getByRole('button', { name: 'ChatGPT' }))
+    fireEvent.click(screen.getByRole('button', { name }))
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('提示词已复制，请在AI中粘贴发送'))
     expect(calls).toEqual(['copy', 'open'])
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('用户问题：重点看合作风险'))
-    expect(open).toHaveBeenCalledWith('https://chatgpt.com/', '_blank', 'noopener,noreferrer')
+    expect(open).toHaveBeenCalledWith(url, '_blank', 'noopener,noreferrer')
   })
 
   it('shows the complete prompt for long-press copying when clipboard access fails', async () => {

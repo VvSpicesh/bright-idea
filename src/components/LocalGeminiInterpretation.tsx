@@ -6,6 +6,8 @@ const AI_SITES = [
   { name: 'ChatGPT', url: 'https://chatgpt.com/' },
   { name: 'Gemini', url: 'https://gemini.google.com/app' },
   { name: 'DeepSeek', url: 'https://chat.deepseek.com/' },
+  { name: '豆包', url: 'https://www.doubao.com/' },
+  { name: 'Kimi', url: 'https://kimi.moonshot.cn/' },
 ] as const
 
 export function LocalGeminiInterpretation({ context }: { context: AiPromptContext }) {
