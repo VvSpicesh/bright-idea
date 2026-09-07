@@ -24,21 +24,36 @@ describe('AI 提示词导出', () => {
     vi.stubGlobal('navigator', { clipboard: { writeText } })
   })
 
-  it('builds a complete prompt and defaults to a comprehensive interpretation', () => {
+  it('builds a complete prompt and uses the required text when its editable question is empty', () => {
     const prompt = buildAiInterpretationPrompt(context, '')
 
-    expect(prompt).toContain('用户问题：合作是否适合继续？')
+    expect(prompt).toContain('用户问题：未填写具体问题，请做综合卦象解读。')
     expect(prompt).toContain('起课体系：六宫小六壬')
     expect(prompt).toContain('起课方式：三数起课')
     expect(prompt).toContain('原始输入：1、2、3')
     expect(prompt).toContain('初传：大安；五行：木；方位：正东；关键词：安定')
     expect(prompt).toContain('中传：留连；五行：土；方位：未设定；关键词：拖延')
     expect(prompt).toContain('末传：赤口；五行：金；方位：正西；关键词：口舌')
-    expect(prompt).toContain('请综合解读整个卦象')
     expect(prompt).toContain('分析前期、过程、结果，以及初传、中传、末传之间的关系')
     expect(prompt).toContain('不得修改、质疑或重新计算程序计算出的卦象')
     expect(prompt).toContain('区分传统象义和现实事实')
     expect(prompt).toContain('不得给出确定性的死亡、医疗、法律或投资结论')
+  })
+
+  it('prefills the editable question and resets it for a new divination', () => {
+    const { rerender } = render(<LocalGeminiInterpretation context={context} />)
+    const input = screen.getByLabelText('给AI的问题')
+    expect(input).toHaveValue('合作是否适合继续？')
+
+    fireEvent.change(input, { target: { value: '只关注短期风险' } })
+    expect(input).toHaveValue('只关注短期风险')
+
+    const nextContext = { ...context, question: '新项目是否适合启动？', originalInput: '4、5、6' }
+    rerender(<LocalGeminiInterpretation context={nextContext} />)
+    expect(screen.getByLabelText('给AI的问题')).toHaveValue('新项目是否适合启动？')
+
+    rerender(<LocalGeminiInterpretation context={{ ...nextContext, question: '', originalInput: '7、8、9' }} />)
+    expect(screen.getByLabelText('给AI的问题')).toHaveValue('')
   })
 
   it('copies the current prompt before opening the selected AI site', async () => {
@@ -46,13 +61,13 @@ describe('AI 提示词导出', () => {
     writeText.mockImplementation(async () => { calls.push('copy') })
     const open = vi.spyOn(window, 'open').mockImplementation(() => { calls.push('open'); return null })
     render(<LocalGeminiInterpretation context={context} />)
-    fireEvent.change(screen.getByLabelText(/你想问什么/), { target: { value: '重点看合作风险' } })
+    fireEvent.change(screen.getByLabelText('给AI的问题'), { target: { value: '重点看合作风险' } })
 
     fireEvent.click(screen.getByRole('button', { name: 'ChatGPT' }))
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('提示词已复制，请在AI中粘贴发送'))
     expect(calls).toEqual(['copy', 'open'])
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('本次希望重点询问：重点看合作风险'))
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('用户问题：重点看合作风险'))
     expect(open).toHaveBeenCalledWith('https://chatgpt.com/', '_blank', 'noopener,noreferrer')
   })
 
@@ -64,7 +79,7 @@ describe('AI 提示词导出', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gemini' }))
 
     const promptField = await screen.findByLabelText('可手动复制的提示词')
-    expect(promptField).toHaveValue(buildAiInterpretationPrompt(context, ''))
+    expect(promptField).toHaveValue(buildAiInterpretationPrompt(context, context.question))
     expect(screen.getByRole('status')).toHaveTextContent('自动复制失败，请长按下方提示词手动复制')
     expect(window.open).toHaveBeenCalledWith('https://gemini.google.com/app', '_blank', 'noopener,noreferrer')
   })

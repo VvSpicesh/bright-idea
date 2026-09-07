@@ -177,7 +177,7 @@ function ResultView({ result, question, characterEntries, onBack }: { result: Di
       <div className="passes">{passes.map((palace, index) => <article className="pass-card" key={labels[index]}><p className="pass-label">{labels[index]}</p><h3>{palace.name}</h3><p>{palace.element} · {palace.direction || '方位未设定'}</p><p className="keywords">{palace.keywords.join('、')}</p></article>)}</div>
       <DivinationInterpretation passes={passes} />
       <LocalGeminiInterpretation context={{
-        question: question || '未填写事项',
+        question,
         systemName: result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）',
         inputMethod: characterEntries ? '三字起课' : '三数起课',
         originalInput: characterEntries ? characterEntries.map((entry) => entry.original).join('') : result.inputs.join('、'),

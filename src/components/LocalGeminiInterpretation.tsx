@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { buildAiInterpretationPrompt } from '../features/ai/aiPrompt'
 import type { AiPromptContext } from '../features/ai/aiPrompt'
 
@@ -9,10 +9,16 @@ const AI_SITES = [
 ] as const
 
 export function LocalGeminiInterpretation({ context }: { context: AiPromptContext }) {
-  const [focusQuestion, setFocusQuestion] = useState('')
+  const [aiQuestion, setAiQuestion] = useState(context.question)
   const [status, setStatus] = useState('')
   const [showPrompt, setShowPrompt] = useState(false)
-  const prompt = useMemo(() => buildAiInterpretationPrompt(context, focusQuestion), [context, focusQuestion])
+  const prompt = useMemo(() => buildAiInterpretationPrompt(context, aiQuestion), [context, aiQuestion])
+
+  useEffect(() => {
+    setAiQuestion(context.question)
+    setStatus('')
+    setShowPrompt(false)
+  }, [context.inputMethod, context.originalInput, context.question, context.systemName])
 
   const copyPrompt = async (): Promise<boolean> => {
     try {
@@ -38,9 +44,9 @@ export function LocalGeminiInterpretation({ context }: { context: AiPromptContex
       <h3 id="ai-export-title">AI辅助解读</h3>
       {status && <span role="status">{status}</span>}
     </div>
-    <label className="ai-export-question" htmlFor="ai-focus-question">
-      <span>你想问什么 <small>（可选）</small></span>
-      <input id="ai-focus-question" value={focusQuestion} onChange={(event) => setFocusQuestion(event.target.value)} placeholder="为空则综合解读" />
+    <label className="ai-export-question" htmlFor="ai-question">
+      <span>给AI的问题</span>
+      <input id="ai-question" value={aiQuestion} onChange={(event) => setAiQuestion(event.target.value)} placeholder="未填写时综合解读" />
     </label>
     <div className="ai-export-actions">
       <button type="button" onClick={() => void copyPrompt()}>复制提示词</button>
