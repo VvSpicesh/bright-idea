@@ -18,7 +18,7 @@ describe('左手掐诀播放控制', () => {
     expect(container.querySelector('img.hand-image')?.getAttribute('alt')).toContain('左手掌心')
     expect(container.querySelectorAll('.palace-point')).toHaveLength(6)
     expect(container.querySelector('.hand-stage')).toBeInTheDocument()
-    expect(screen.getByText('初传').nextSibling).toHaveTextContent('待落宫')
+    expect(screen.getByRole('button', { name: /初传\s*待落宫/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: /中传\s*待落宫/ })).toBeDisabled()
     act(() => { vi.advanceTimersByTime(timing.totalDurationMs - 1) })
     expect(onCompleteChange).not.toHaveBeenCalled()
@@ -160,6 +160,8 @@ describe('左手掐诀播放控制', () => {
       'pass-result-value is-pending',
       'pass-result-value is-pending',
     ])
+    expect(cards.every((card) => card.querySelector('.pass-result-symbol')?.getAttribute('aria-hidden') === 'true')).toBe(true)
+    expect(cards.every((card) => card.querySelector('.pass-result-symbol img')?.getAttribute('src')?.endsWith('.svg'))).toBe(true)
 
     rerender(<PassResults passes={passes} completed={1} onSelect={vi.fn()} />)
     expect(Array.from(container.querySelectorAll('.pass-result'))).toEqual(cards)

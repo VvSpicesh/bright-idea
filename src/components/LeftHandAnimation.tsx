@@ -26,6 +26,18 @@ export const NINE_HAND_POINTS = {
 
 export const HAND_PALACE_ORDER = ['大安', '留连', '速喜', '赤口', '小吉', '空亡', '病符', '桃花', '天德'] as const
 
+export const PALACE_SYMBOL_PATHS: Readonly<Record<string, string>> = Object.freeze({
+  大安: `${import.meta.env.BASE_URL}images/palaces/da-an.svg`,
+  留连: `${import.meta.env.BASE_URL}images/palaces/liu-lian.svg`,
+  速喜: `${import.meta.env.BASE_URL}images/palaces/su-xi.svg`,
+  赤口: `${import.meta.env.BASE_URL}images/palaces/chi-kou.svg`,
+  小吉: `${import.meta.env.BASE_URL}images/palaces/xiao-ji.svg`,
+  空亡: `${import.meta.env.BASE_URL}images/palaces/kong-wang.svg`,
+  病符: `${import.meta.env.BASE_URL}images/palaces/bing-fu.svg`,
+  桃花: `${import.meta.env.BASE_URL}images/palaces/tao-hua.svg`,
+  天德: `${import.meta.env.BASE_URL}images/palaces/tian-de.svg`,
+})
+
 type HandPoints = typeof SIX_HAND_POINTS | typeof NINE_HAND_POINTS
 type Point = HandPoints[keyof HandPoints]
 
@@ -90,7 +102,7 @@ function prefersReducedMotion(): boolean {
 }
 
 export function PassResults({ passes, completed, onSelect }: { passes: readonly [Palace, Palace, Palace]; completed: number; onSelect: (index: number) => void }) {
-  return <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => onSelect(index)} disabled={completed <= index} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong><span className={completed > index ? 'pass-result-value' : 'pass-result-value is-pending'}>{completed > index ? palace.name : '待落宫'}</span></button>)}</div>
+  return <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => onSelect(index)} disabled={completed <= index} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong><span className={completed > index ? 'pass-result-symbol' : 'pass-result-symbol is-pending'} aria-hidden="true"><img src={PALACE_SYMBOL_PATHS[palace.name]} alt="" /></span><span className={completed > index ? 'pass-result-value' : 'pass-result-value is-pending'}>{completed > index ? palace.name : '待落宫'}</span></button>)}</div>
 }
 
 export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange, hidePassResults = false, onCompletedChange, onPassSelectReady, runId = 0 }: { steps: readonly [CalculationStep, CalculationStep, CalculationStep]; passes: readonly [Palace, Palace, Palace]; palaceCount: number; onCompleteChange?: (complete: boolean) => void; hidePassResults?: boolean; onCompletedChange?: (completed: number) => void; onPassSelectReady?: (select: (index: number) => void) => void; runId?: number }) {

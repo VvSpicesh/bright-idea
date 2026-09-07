@@ -87,6 +87,9 @@ h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-hei
 .pass-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .pass-result { display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: clamp(10px, 1vw, 12px); padding: 9px; border: 1px solid #d9cbb5; color: #806f5c; font: inherit; font-size: clamp(20px, 2.1vw, 30px); font-weight: 700; line-height: 1.1; text-align: center; cursor: pointer; }
 .pass-result strong { color: #1f6f5b; font-size: clamp(14px, 1.25vw, 18px); font-weight: 600; line-height: 1.1; }
+.pass-result-symbol { display: grid; width: clamp(32px, 6vw, 40px); height: clamp(32px, 6vw, 40px); flex: 0 0 auto; place-items: center; transition: opacity 120ms ease; }
+.pass-result-symbol img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.pass-result-symbol.is-pending { opacity: 0; }
 .pass-result-value { display: block; transition: opacity 120ms ease; }
 .pass-result-value.is-pending { opacity: 0; }
 .pass-result.is-done { border-color: #1f6f5b; color: #17332f; font-weight: 700; }
@@ -186,6 +189,7 @@ h2 { margin: 0 0 8px; font-size: 1.35rem; }
   .result-left .pass-results { gap: clamp(4px, .8dvh, 8px); }
   .result-left .pass-result { padding: clamp(5px, 1dvh, 9px); font-size: clamp(28px, 2.1vw, 30px); }
   .result-left .pass-result strong { font-size: 18px; }
+  .result-left .pass-result-symbol { width: clamp(48px, 4vw, 56px); height: clamp(48px, 4vw, 56px); }
   .result-left > .pass-results { min-width: 0; min-height: 0; grid-column: 1; grid-row: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); align-self: stretch; }
   .revealed-result { display: contents; }
   .result-right-top .passes { margin-top: 0; }
