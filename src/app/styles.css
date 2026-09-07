@@ -69,8 +69,10 @@ h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-hei
 .hand-image { display: block; width: 100%; height: 100%; object-fit: contain; }
 .palace-layer { position: absolute; inset: 0; }
 .palace-point { position: absolute; display: grid; width: 30px; height: 30px; place-items: center; border: 1.8px solid #1f6f5b; border-radius: 50%; color: #17332f; background: rgba(244, 239, 230, .9); font-size: 8px; line-height: 1; transform: translate(-50%, -50%); }
-.active-marker-position { position: absolute; width: 0; height: 0; pointer-events: none; transform: translate(-50%, -50%); transition: left 400ms cubic-bezier(.22, .75, .25, 1), top 400ms cubic-bezier(.22, .75, .25, 1); }
+.active-marker-position, .active-marker-trail-position { position: absolute; width: 0; height: 0; pointer-events: none; transform: translate(-50%, -50%); }
+.active-marker-position { transition-property: left, top; transition-timing-function: cubic-bezier(.22, .75, .25, 1); }
 .active-marker { position: absolute; top: 0; left: 0; display: block; width: 38px; height: 38px; border: 3px solid #c25735; border-radius: 50%; filter: drop-shadow(0 0 5px #c25735); transform: translate(-50%, -50%); animation: pulse-marker 450ms cubic-bezier(.22, .75, .25, 1); }
+.active-marker-trail { position: absolute; top: 0; left: 0; display: block; width: 38px; height: 38px; border: 2px solid #c25735; border-radius: 50%; transform: translate(-50%, -50%); animation: marker-trail-fade 220ms ease-out forwards; }
 .pass-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .pass-result { display: grid; gap: 4px; padding: 9px; border: 1px solid #d9cbb5; color: #806f5c; font-size: .9rem; text-align: center; font: inherit; cursor: pointer; }
 .pass-result strong { color: #1f6f5b; font-size: .78rem; }
@@ -98,6 +100,7 @@ h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-hei
 .ai-export-actions button:hover, .ai-export-actions button:focus-visible { color: #fff; background: #1f6f5b; }
 .ai-export-prompt { width: 100%; min-height: 140px; margin-top: 7px; padding: 7px; resize: vertical; border: 1px solid #cdbda5; border-radius: 5px; color: #17332f; background: #fffdf8; font: inherit; font-size: .72rem; line-height: 1.45; }
 @keyframes pulse-marker { 0% { opacity: .5; } 55% { opacity: 1; } 100% { opacity: 1; } }
+@keyframes marker-trail-fade { from { opacity: .42; transform: translate(-50%, -50%) scale(.94); } to { opacity: 0; transform: translate(-50%, -50%) scale(.72); } }
 .status-panel { text-align: center; }
 .status-panel p { color: #536b64; }
 .confirm-button { margin-top: 18px; }
@@ -151,6 +154,6 @@ h2 { margin: 0 0 8px; font-size: 1.35rem; }
   .nav-item { color: #9caea5; }
   .nav-item:hover, .nav-item:focus-visible { background: #30463e; }
 }
-@media (prefers-reduced-motion: reduce) { .active-marker-position { transition: none; } .active-marker { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .active-marker-position { transition: none; } .active-marker, .active-marker-trail { animation: none; } }
 @media (max-width: 560px) { .section-heading, .result-header, .animation-heading { align-items: center; } .result-header { flex-direction: row; } .animation-heading { flex-direction: row; } .result-header h2 { max-width: 13rem; font-size: 1.05rem; } .animation-actions { gap: 4px; } .text-button { min-height: 34px; padding: 4px 6px; font-size: .72rem; } .hand-stage { width: min(100%, 230px); } .ai-export-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; } .ai-export-actions button { min-width: 0; min-height: 32px; padding: 4px 5px; } }
 @media (max-width: 380px) { .main-content { padding-right: 12px; padding-left: 12px; } .nav-item { min-width: 82px; } .form-panel, .result-panel, .status-panel { padding-right: 10px; padding-left: 10px; } .pass-card { padding: 6px; } .pass-card h3 { font-size: .9rem; } .pass-card p { font-size: .6rem; } .hand-stage { width: 220px; } }

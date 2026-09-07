@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getAnimationPath, getHandPoints, getPalaceJoint, NINE_HAND_POINTS, SIX_HAND_POINTS } from './LeftHandAnimation'
+import { calculateThreePasses, classicSixRules } from '../rules'
+import { getAnimationPath, getAnimationTiming, getHandPoints, getPalaceJoint, NINE_HAND_POINTS, SIX_HAND_POINTS } from './LeftHandAnimation'
 
 describe('左手掌诀映射与轨迹压缩', () => {
   it('maps all nine palaces to the specified finger joints', () => {
@@ -40,6 +41,22 @@ describe('左手掌诀映射与轨迹压缩', () => {
     expect(path).toHaveLength(12)
     expect(path[0]).toBe(7)
     expect(path.at(-1)).toBe(step.endIndex)
+  })
+
+  it('keeps typical and high-step playback near 2.5 seconds by accelerating each visual step', () => {
+    const typical = calculateThreePasses(classicSixRules, [12n, 12n, 12n])
+    const highStep = calculateThreePasses(classicSixRules, [36n, 36n, 36n])
+    const typicalTiming = getAnimationTiming(typical.steps, 6)
+    const highStepTiming = getAnimationTiming(highStep.steps, 6)
+
+    expect(typicalTiming.visualStepCount).toBe(36)
+    expect(highStepTiming.visualStepCount).toBe(108)
+    expect(highStepTiming.stepDurationMs).toBeLessThan(typicalTiming.stepDurationMs)
+    expect(typicalTiming.passPauseMs).toBe(180)
+    expect(typicalTiming.totalDurationMs).toBeGreaterThanOrEqual(2_200)
+    expect(typicalTiming.totalDurationMs).toBeLessThan(3_000)
+    expect(highStepTiming.totalDurationMs).toBeGreaterThanOrEqual(2_200)
+    expect(highStepTiming.totalDurationMs).toBeLessThan(3_000)
   })
 
   it('keeps the existing hand image and places no palace on the little finger', () => {
