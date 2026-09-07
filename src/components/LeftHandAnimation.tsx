@@ -265,6 +265,5 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
       </div>
     </div>
     {!hidePassResults && <PassResults passes={passes} completed={completed} onSelect={showPass} />}
-    {playing && activePass !== null && Number(steps[activePass].rounds) > 0 && <p className="round-note">完整圈 ×{steps[activePass].rounds}圈，再走余数路径</p>}
   </section>
 }
