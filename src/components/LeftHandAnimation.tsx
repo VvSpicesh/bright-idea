@@ -254,19 +254,21 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
 
   return <section className="hand-animation" aria-labelledby="hand-animation-title">
     <div className="animation-heading"><div><p className="pass-label">掌诀演示</p><h3 id="hand-animation-title">三传落宫</h3></div><div className="animation-actions"><button className="text-button" type="button" onClick={finishImmediately}>跳过动画</button><button className="text-button" type="button" onClick={play}>重新播放</button></div></div>
-    <div className="hand-stage" role="img" aria-label={description}>
-      <img className="hand-image" src={LEFT_PALM_IMAGE} alt="左手掌心，拇指在左侧，食指、中指、无名指和小指向上" />
-      <div className="palace-layer" aria-hidden="true">
-        {HAND_PALACE_ORDER.slice(0, palaceCount).map((name) => {
-          const point = points[name as keyof HandPoints]
-          return <span className="palace-point" key={name} style={{ left: `${point.x}%`, top: `${point.y}%` }}>{name}</span>
-        })}
-        {trails.map((trail) => {
-          const trailName = HAND_PALACE_ORDER[trail.palaceIndex]
-          const trailPoint = points[trailName as keyof HandPoints]
-          return <span className="active-marker-trail-position" key={trail.id} style={{ left: `${trailPoint.x}%`, top: `${trailPoint.y}%` }}><span className="active-marker-trail" /></span>
-        })}
-        {activePoint && <span className="active-marker-position" style={{ left: `${activePoint.x}%`, top: `${activePoint.y}%`, transitionDuration: `${Math.min(timing.stepDurationMs, 120)}ms` }}><span className="active-marker" /></span>}
+    <div className="hand-stage-area">
+      <div className="hand-stage" role="img" aria-label={description}>
+        <img className="hand-image" src={LEFT_PALM_IMAGE} alt="左手掌心，拇指在左侧，食指、中指、无名指和小指向上" />
+        <div className="palace-layer" aria-hidden="true">
+          {HAND_PALACE_ORDER.slice(0, palaceCount).map((name) => {
+            const point = points[name as keyof HandPoints]
+            return <span className="palace-point" key={name} style={{ left: `${point.x}%`, top: `${point.y}%` }}>{name}</span>
+          })}
+          {trails.map((trail) => {
+            const trailName = HAND_PALACE_ORDER[trail.palaceIndex]
+            const trailPoint = points[trailName as keyof HandPoints]
+            return <span className="active-marker-trail-position" key={trail.id} style={{ left: `${trailPoint.x}%`, top: `${trailPoint.y}%` }}><span className="active-marker-trail" /></span>
+          })}
+          {activePoint && <span className="active-marker-position" style={{ left: `${activePoint.x}%`, top: `${activePoint.y}%`, transitionDuration: `${Math.min(timing.stepDurationMs, 120)}ms` }}><span className="active-marker" /></span>}
+        </div>
       </div>
     </div>
     {!hidePassResults && <PassResults passes={passes} completed={completed} onSelect={showPass} />}
