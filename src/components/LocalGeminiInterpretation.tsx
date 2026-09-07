@@ -20,7 +20,7 @@ export function LocalGeminiInterpretation({ context }: { context: AiPromptContex
     setAiQuestion(context.question)
     setStatus('')
     setShowPrompt(false)
-  }, [context.inputMethod, context.originalInput, context.question, context.systemName])
+  }, [context.inputMethod, context.originalInput, context.question, context.sourceDetails, context.systemName])
 
   const copyPrompt = async (): Promise<boolean> => {
     try {

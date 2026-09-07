@@ -8,6 +8,7 @@ const context = {
   systemName: '六宫小六壬',
   inputMethod: '三数起课',
   originalInput: '1、2、3',
+  sourceDetails: '公历时间：2024-02-10 23:00；农历日期：2024年1月1日；时辰：子；原始数字：1、1、1',
   passes: [
     { name: '大安', element: '木', keywords: ['安定'], direction: '正东' },
     { name: '留连', element: '土', keywords: ['拖延'] },
@@ -31,6 +32,7 @@ describe('AI 提示词导出', () => {
     expect(prompt).toContain('起课体系：六宫小六壬')
     expect(prompt).toContain('起课方式：三数起课')
     expect(prompt).toContain('原始输入：1、2、3')
+    expect(prompt).toContain('来源信息：公历时间：2024-02-10 23:00；农历日期：2024年1月1日；时辰：子；原始数字：1、1、1')
     expect(prompt).toContain('初传：大安；五行：木；方位：正东；关键词：安定')
     expect(prompt).toContain('中传：留连；五行：土；方位：未设定；关键词：拖延')
     expect(prompt).toContain('末传：赤口；五行：金；方位：正西；关键词：口舌')

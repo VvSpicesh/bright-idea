@@ -78,6 +78,56 @@ describe('三数起课应用流程', () => {
     expect(screen.getByRole('button', { name: '下一项' })).toBeInTheDocument()
   })
 
+  it('starts a random divination and exposes a compact change-set action', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('tab', { name: '随机起课' }))
+    fireEvent.click(screen.getByRole('button', { name: '随机起课' }))
+    fireEvent.click(screen.getByRole('button', { name: '跳过动画' }))
+
+    const source = screen.getByText(/随机三数：/)
+    const values = source.textContent?.match(/\d+/g)?.map(Number) ?? []
+    expect(values).toHaveLength(3)
+    values.forEach((value) => {
+      expect(value).toBeGreaterThanOrEqual(1)
+      expect(value).toBeLessThanOrEqual(18)
+    })
+    expect(screen.getByRole('button', { name: '换一组' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '重新起课' }))
+    expect(screen.getByText(/当前数字：/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '沿用当前三数起课' })).toBeInTheDocument()
+  })
+
+  it('uses the selected local time for six- and nine-palace divination', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('tab', { name: '时间起课' }))
+    fireEvent.change(screen.getByLabelText('公历日期时间'), { target: { value: '2024-02-10T23:00' } })
+    fireEvent.click(screen.getByRole('button', { name: '按此时间起课' }))
+    fireEvent.click(screen.getByRole('button', { name: '跳过动画' }))
+    expect(screen.getByText(/公历时间：2024-02-10 23:00/)).toBeInTheDocument()
+    expect(screen.getByText(/农历日期：2024年1月1日/)).toBeInTheDocument()
+    expect(screen.getByText(/时辰：子/)).toBeInTheDocument()
+    expect(screen.getByText(/原始数字：1、1、1/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '重新起课' }))
+    fireEvent.click(screen.getByRole('radio', { name: '九宫小六壬（荀爽体系）' }))
+    expect(screen.getByLabelText('公历日期时间')).toHaveValue('2024-02-10T23:00')
+    fireEvent.click(screen.getByRole('button', { name: '按此时间起课' }))
+    fireEvent.click(screen.getByRole('button', { name: '跳过动画' }))
+    expect(screen.getByText(/九宫小六壬\s*（荀爽体系）/)).toBeInTheDocument()
+  })
+
+  it('clears mode-specific inputs and errors when switching methods', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('tab', { name: '任意三字' }))
+    fireEvent.change(screen.getByLabelText('三个汉字'), { target: { value: '天1地' } })
+    fireEvent.click(screen.getByRole('button', { name: '转换并确认笔画' }))
+    expect(screen.getByText('仅允许汉字和空格，标点及其他内容不能使用')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '随机起课' }))
+    expect(screen.queryByText('仅允许汉字和空格，标点及其他内容不能使用')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '时间起课' }))
+    expect(screen.queryByText('仅允许汉字和空格，标点及其他内容不能使用')).not.toBeInTheDocument()
+  })
+
   it('allows navigation to unfinished sections', () => {
     render(<App />)
     expect(screen.getByText('传统文化研究与娱乐用途，不构成现实领域的专业建议。').closest('header')).toBeInTheDocument()

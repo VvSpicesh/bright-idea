@@ -1,16 +1,24 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { calculateThreePasses, classicSixRules, xunNineRules } from '../rules'
 import type { DivinationResult, RuleSystem } from '../rules'
 import { isParsedNumber, parsePositiveInteger } from '../features/divination/numberInput'
 import { createCharacterEntries, lookupStrokeCount, STROKE_DATA_SOURCE, STROKE_DATA_VERSION, validateCharacters } from '../features/divination/characterInput'
 import type { CharacterEntry } from '../features/divination/characterInput'
+import { convertTimeDivination, formatDateTimeLocal, generateRandomInputs } from '../features/divination/methods'
+import type { DivinationMethod, TimeDivinationValues } from '../features/divination/methods'
 import { LeftHandAnimation } from '../components/LeftHandAnimation'
 import { DivinationInterpretation } from '../components/DivinationInterpretation'
 import { LocalGeminiInterpretation } from '../components/LocalGeminiInterpretation'
 
 type Section = '起课' | '记录' | '规则'
-type InputMode = 'number' | 'character'
+type InputMode = DivinationMethod
+
+type ResultSource =
+  | { method: 'number' }
+  | { method: 'character'; entries: CharacterEntry[] }
+  | { method: 'random' }
+  | { method: 'time'; values: TimeDivinationValues }
 
 const sections: Section[] = ['起课', '记录', '规则']
 
@@ -22,11 +30,16 @@ export function App() {
   const [retainedInputs, setRetainedInputs] = useState([false, false, false])
   const [errors, setErrors] = useState(['', '', ''])
   const [result, setResult] = useState<DivinationResult | null>(null)
+  const [resultSource, setResultSource] = useState<ResultSource | null>(null)
   const [inputMode, setInputMode] = useState<InputMode>('number')
   const [characterInput, setCharacterInput] = useState('')
   const [characterEntries, setCharacterEntries] = useState<CharacterEntry[] | null>(null)
   const [characterError, setCharacterError] = useState('')
   const [selectedInput, setSelectedInput] = useState(0)
+  const [randomInputs, setRandomInputs] = useState<[number, number, number] | null>(null)
+  const [reuseRandomInputs, setReuseRandomInputs] = useState(false)
+  const [timeInput, setTimeInput] = useState(() => formatDateTimeLocal(new Date()))
+  const [timeError, setTimeError] = useState('')
 
   const updateInput = (index: number, value: string) => {
     setInputs((current) => current.map((item, itemIndex) => itemIndex === index ? value : item))
@@ -38,6 +51,26 @@ export function App() {
     if (inputMode === 'character') {
       if (!characterEntries || characterEntries.some((entry) => !entry.finalStrokeCount)) return
       setResult(calculateThreePasses(ruleSystem, characterEntries.map((entry) => BigInt(entry.finalStrokeCount!)) as [bigint, bigint, bigint]))
+      setResultSource({ method: 'character', entries: characterEntries })
+      return
+    }
+    if (inputMode === 'random') {
+      const nextInputs = reuseRandomInputs && randomInputs ? randomInputs : generateRandomInputs()
+      setRandomInputs(nextInputs)
+      setReuseRandomInputs(false)
+      setResult(calculateThreePasses(ruleSystem, nextInputs.map(BigInt) as [bigint, bigint, bigint]))
+      setResultSource({ method: 'random' })
+      return
+    }
+    if (inputMode === 'time') {
+      try {
+        const values = convertTimeDivination(timeInput)
+        setTimeError('')
+        setResult(calculateThreePasses(ruleSystem, values.inputs.map(BigInt) as [bigint, bigint, bigint]))
+        setResultSource({ method: 'time', values })
+      } catch (error) {
+        setTimeError(error instanceof Error ? error.message : '请输入有效的日期时间')
+      }
       return
     }
     const parsed = inputs.map(parsePositiveInteger)
@@ -50,9 +83,20 @@ export function App() {
     if (!parsed.every(isParsedNumber)) return
     setRetainedInputs([true, true, true])
     setResult(calculateThreePasses(ruleSystem, parsed as [bigint, bigint, bigint]))
+    setResultSource({ method: 'number' })
   }
 
-  const resetToForm = () => setResult(null)
+  const resetToForm = () => {
+    setResult(null)
+    setReuseRandomInputs(resultSource?.method === 'random')
+  }
+
+  const changeRandomSet = () => {
+    const nextInputs = generateRandomInputs()
+    setRandomInputs(nextInputs)
+    setResult(calculateThreePasses(ruleSystem, nextInputs.map(BigInt) as [bigint, bigint, bigint]))
+    setResultSource({ method: 'random' })
+  }
 
   const beginCharacterConfirmation = async () => {
     const error = validateCharacters(characterInput)
@@ -68,20 +112,30 @@ export function App() {
   const switchInputMode = (mode: InputMode) => {
     setInputMode(mode)
     setResult(null)
+    setResultSource(null)
+    setInputs(['', '', ''])
+    setRetainedInputs([false, false, false])
+    setErrors(['', '', ''])
     setCharacterEntries(null)
+    setCharacterInput('')
     setCharacterError('')
+    setRandomInputs(null)
+    setReuseRandomInputs(false)
+    setTimeInput(formatDateTimeLocal(new Date()))
+    setTimeError('')
     setSelectedInput(0)
   }
 
   const renderNavigationPage = () => {
     if (activeSection === '记录') return <section className="status-panel"><h2>记录</h2><p>记录功能后续开放。</p></section>
     if (activeSection === '规则') return <section className="status-panel"><h2>规则</h2><p>规则说明后续开放。</p></section>
-    return result ? <ResultView result={result} question={question} characterEntries={inputMode === 'character' ? characterEntries : null} onBack={resetToForm} /> : <DivinationForm
+    return result ? <ResultView result={result} question={question} source={resultSource!} onBack={resetToForm} onRandomize={changeRandomSet} /> : <DivinationForm
       ruleSystem={ruleSystem} setRuleSystem={setRuleSystem} question={question} setQuestion={setQuestion}
       inputs={inputs} errors={errors} retainedInputs={retainedInputs} updateInput={updateInput} onSubmit={startDivination} selectedInput={selectedInput} setSelectedInput={setSelectedInput}
       inputMode={inputMode} setInputMode={switchInputMode} characterInput={characterInput} setCharacterInput={setCharacterInput}
       characterEntries={characterEntries} characterError={characterError} onConfirmCharacters={beginCharacterConfirmation}
-      onCharacterEntriesChange={setCharacterEntries}
+      onCharacterEntriesChange={setCharacterEntries} randomInputs={randomInputs} reuseRandomInputs={reuseRandomInputs}
+      timeInput={timeInput} setTimeInput={(value) => { setTimeInput(value); setTimeError('') }} timeError={timeError}
     />
   }
 
@@ -114,12 +168,13 @@ export function App() {
   )
 }
 
-function DivinationForm({ ruleSystem, setRuleSystem, question, setQuestion, inputs, errors, retainedInputs, updateInput, onSubmit, inputMode, setInputMode, characterInput, setCharacterInput, characterEntries, characterError, onConfirmCharacters, onCharacterEntriesChange, selectedInput, setSelectedInput }: {
+function DivinationForm({ ruleSystem, setRuleSystem, question, setQuestion, inputs, errors, retainedInputs, updateInput, onSubmit, inputMode, setInputMode, characterInput, setCharacterInput, characterEntries, characterError, onConfirmCharacters, onCharacterEntriesChange, selectedInput, setSelectedInput, randomInputs, reuseRandomInputs, timeInput, setTimeInput, timeError }: {
   ruleSystem: RuleSystem; setRuleSystem: (value: RuleSystem) => void; question: string; setQuestion: (value: string) => void
   inputs: string[]; errors: string[]; retainedInputs: boolean[]; updateInput: (index: number, value: string) => void; onSubmit: () => void
   inputMode: InputMode; setInputMode: (mode: InputMode) => void; characterInput: string; setCharacterInput: (value: string) => void
   characterEntries: CharacterEntry[] | null; characterError: string; onConfirmCharacters: () => void
   onCharacterEntriesChange: (entries: CharacterEntry[] | null) => void; selectedInput: number; setSelectedInput: (value: number) => void
+  randomInputs: [number, number, number] | null; reuseRandomInputs: boolean; timeInput: string; setTimeInput: (value: string) => void; timeError: string
 }) {
   const handleNumberKey = (key: string) => {
     if (/^[0-9]$/.test(key)) updateInput(selectedInput, inputs[selectedInput] + key)
@@ -143,9 +198,31 @@ function DivinationForm({ ruleSystem, setRuleSystem, question, setQuestion, inpu
     </fieldset>
     <label className="field-label" htmlFor="question">所问事项 <span>（可选）</span></label>
     <input className="text-input" id="question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="例如：今天适合推进这件事吗？" />
-    <div className="mode-tabs" role="tablist" aria-label="起课方式"><button type="button" role="tab" aria-selected={inputMode === 'number'} className={inputMode === 'number' ? 'mode-tab is-active' : 'mode-tab'} onClick={() => setInputMode('number')}>任意三数</button><button type="button" role="tab" aria-selected={inputMode === 'character'} className={inputMode === 'character' ? 'mode-tab is-active' : 'mode-tab'} onClick={() => setInputMode('character')}>任意三字</button></div>
-    {inputMode === 'number' ? <><div className="numbers-grid">{inputs.map((value, index) => <div className={selectedInput === index ? 'number-field is-selected' : 'number-field'} key={index}><label className="field-label" htmlFor={`number-${index}`}>第{index + 1}数</label><input className={`text-input number-display${retainedInputs[index] ? ' is-retained' : ''}`} id={`number-${index}`} readOnly value={value} onClick={() => { setSelectedInput(index); updateInput(index, '') }} onKeyDown={handleNumberInputKeyDown} onChange={(event) => updateInput(index, event.target.value)} aria-invalid={Boolean(errors[index])} aria-describedby={errors[index] ? `error-${index}` : undefined} />{errors[index] && <p className="error-text" id={`error-${index}`}>{errors[index]}</p>}</div>)}</div><div className="number-keypad" aria-label="应用内数字键盘"><div className="keypad-row">{['1', '2', '3', '4', '5'].map((key) => <button type="button" key={key} aria-label={`输入${key}`} onClick={() => handleNumberKey(key)}>{key}</button>)}</div><div className="keypad-row">{['6', '7', '8', '9', '0'].map((key) => <button type="button" key={key} aria-label={`输入${key}`} onClick={() => handleNumberKey(key)}>{key}</button>)}</div><div className="keypad-row"><button type="button" aria-label="退格" onClick={() => handleNumberKey('backspace')}>退格</button><button type="button" aria-label="清空" onClick={() => handleNumberKey('clear')}>清空</button><button type="button" aria-label={inputs.every((value) => /^[1-9][0-9]*$/.test(value)) ? '开始起课' : '下一项'} onClick={() => handleNumberKey('next')}>{inputs.every((value) => /^[1-9][0-9]*$/.test(value)) ? '开始起课' : '下一项'}</button></div></div></> : <CharacterConfirmation characterInput={characterInput} setCharacterInput={setCharacterInput} characterEntries={characterEntries} characterError={characterError} onConfirm={onConfirmCharacters} onEntriesChange={onCharacterEntriesChange} onSubmit={onSubmit} />}
+    <div className="mode-tabs" role="tablist" aria-label="起课方式"><button type="button" role="tab" aria-selected={inputMode === 'number'} className={inputMode === 'number' ? 'mode-tab is-active' : 'mode-tab'} onClick={() => setInputMode('number')}>任意三数</button><button type="button" role="tab" aria-selected={inputMode === 'character'} className={inputMode === 'character' ? 'mode-tab is-active' : 'mode-tab'} onClick={() => setInputMode('character')}>任意三字</button><button type="button" role="tab" aria-selected={inputMode === 'random'} className={inputMode === 'random' ? 'mode-tab is-active' : 'mode-tab'} onClick={() => setInputMode('random')}>随机起课</button><button type="button" role="tab" aria-selected={inputMode === 'time'} className={inputMode === 'time' ? 'mode-tab is-active' : 'mode-tab'} onClick={() => setInputMode('time')}>时间起课</button></div>
+    {inputMode === 'number' ? <><div className="numbers-grid">{inputs.map((value, index) => <div className={selectedInput === index ? 'number-field is-selected' : 'number-field'} key={index}><label className="field-label" htmlFor={`number-${index}`}>第{index + 1}数</label><input className={`text-input number-display${retainedInputs[index] ? ' is-retained' : ''}`} id={`number-${index}`} readOnly value={value} onClick={() => { setSelectedInput(index); updateInput(index, '') }} onKeyDown={handleNumberInputKeyDown} onChange={(event) => updateInput(index, event.target.value)} aria-invalid={Boolean(errors[index])} aria-describedby={errors[index] ? `error-${index}` : undefined} />{errors[index] && <p className="error-text" id={`error-${index}`}>{errors[index]}</p>}</div>)}</div><div className="number-keypad" aria-label="应用内数字键盘"><div className="keypad-row">{['1', '2', '3', '4', '5'].map((key) => <button type="button" key={key} aria-label={`输入${key}`} onClick={() => handleNumberKey(key)}>{key}</button>)}</div><div className="keypad-row">{['6', '7', '8', '9', '0'].map((key) => <button type="button" key={key} aria-label={`输入${key}`} onClick={() => handleNumberKey(key)}>{key}</button>)}</div><div className="keypad-row"><button type="button" aria-label="退格" onClick={() => handleNumberKey('backspace')}>退格</button><button type="button" aria-label="清空" onClick={() => handleNumberKey('clear')}>清空</button><button type="button" aria-label={inputs.every((value) => /^[1-9][0-9]*$/.test(value)) ? '开始起课' : '下一项'} onClick={() => handleNumberKey('next')}>{inputs.every((value) => /^[1-9][0-9]*$/.test(value)) ? '开始起课' : '下一项'}</button></div></div></> : inputMode === 'character' ? <CharacterConfirmation characterInput={characterInput} setCharacterInput={setCharacterInput} characterEntries={characterEntries} characterError={characterError} onConfirm={onConfirmCharacters} onEntriesChange={onCharacterEntriesChange} onSubmit={onSubmit} /> : inputMode === 'random' ? <RandomDivination randomInputs={randomInputs} reuseRandomInputs={reuseRandomInputs} onSubmit={onSubmit} /> : <TimeDivination timeInput={timeInput} setTimeInput={setTimeInput} timeError={timeError} onSubmit={onSubmit} />}
   </section>
+}
+
+function RandomDivination({ randomInputs, reuseRandomInputs, onSubmit }: { randomInputs: [number, number, number] | null; reuseRandomInputs: boolean; onSubmit: () => void }) {
+  return <div className="method-flow">
+    <p className="method-description">每次起课从 1～18 安全随机生成三个数字，直接进入三传计算。</p>
+    {randomInputs && <p className="method-preview">当前数字：{randomInputs.join('、')}</p>}
+    <button className="primary-button" type="button" onClick={onSubmit}>{reuseRandomInputs ? '沿用当前三数起课' : '随机起课'}</button>
+  </div>
+}
+
+function TimeDivination({ timeInput, setTimeInput, timeError, onSubmit }: { timeInput: string; setTimeInput: (value: string) => void; timeError: string; onSubmit: () => void }) {
+  let preview: TimeDivinationValues | null = null
+  if (timeInput) {
+    try { preview = convertTimeDivination(timeInput) } catch { preview = null }
+  }
+  return <div className="method-flow">
+    <label className="field-label" htmlFor="time-input">公历日期时间</label>
+    <input className="text-input time-input" id="time-input" type="datetime-local" value={timeInput} onChange={(event) => setTimeInput(event.target.value)} aria-invalid={Boolean(timeError)} aria-describedby={timeError ? 'time-error' : undefined} />
+    {timeError && <p className="error-text" id="time-error">{timeError}</p>}
+    {preview && <div className="method-preview"><p>农历：{preview.lunarText}</p><p>时辰：{preview.shichenName} · 取数：{preview.inputs.join('、')}</p></div>}
+    <button className="primary-button" type="button" onClick={onSubmit}>按此时间起课</button>
+  </div>
 }
 
 function CharacterConfirmation({ characterInput, setCharacterInput, characterEntries, characterError, onConfirm, onEntriesChange, onSubmit }: { characterInput: string; setCharacterInput: (value: string) => void; characterEntries: CharacterEntry[] | null; characterError: string; onConfirm: () => void; onEntriesChange: (entries: CharacterEntry[] | null) => void; onSubmit: () => void }) {
@@ -162,18 +239,24 @@ function CharacterConfirmation({ characterInput, setCharacterInput, characterEnt
   return <div className="character-flow"><label className="field-label" htmlFor="characters">三个汉字</label><input className="text-input" id="characters" value={characterInput} onChange={(event) => { setCharacterInput(event.target.value); onEntriesChange(null) }} placeholder="例如：发展顺" aria-invalid={Boolean(characterError)} />{characterError && <p className="error-text">{characterError}</p>}<button className="secondary-button confirm-button" type="button" onClick={onConfirm}>转换并确认笔画</button>{characterEntries && <><p className="data-note">请确认繁体字和笔画后起课。数据口径：康熙笔画，{STROKE_DATA_VERSION}。</p><div className="character-list">{characterEntries.map((entry, index) => <div className="character-row" key={entry.original + index}><div><strong>{entry.original}</strong><span>原字</span></div><label>繁体字<input className="compact-input" value={entry.traditional} onChange={(event) => updateEntry(index, 'traditional', event.target.value)} /></label><span>数据笔画：{entry.dataStrokeCount ?? '未找到'}</span><label>最终笔画<input className="compact-input" inputMode="numeric" value={entry.manualStrokeCount ?? entry.finalStrokeCount ?? ''} onChange={(event) => updateEntry(index, 'manualStrokeCount', event.target.value)} placeholder="手工填写" /></label></div>)}</div><p className="data-note">来源：{STROKE_DATA_SOURCE} · {STROKE_DATA_VERSION}</p><button className="primary-button" type="button" onClick={onSubmit} disabled={!canSubmit}>确认并开始起课</button></>}</div>
 }
 
-function ResultView({ result, question, characterEntries, onBack }: { result: DivinationResult; question: string; characterEntries: CharacterEntry[] | null; onBack: () => void }) {
+function ResultView({ result, question, source, onBack, onRandomize }: { result: DivinationResult; question: string; source: ResultSource; onBack: () => void; onRandomize: () => void }) {
   const passes = [result.first, result.second, result.third] as const
   const labels = ['初传', '中传', '末传']
   const [animationComplete, setAnimationComplete] = useState(false)
   const handleAnimationCompleteChange = useCallback((complete: boolean) => setAnimationComplete(complete), [])
+  useEffect(() => setAnimationComplete(false), [result])
+  const inputMethod = source.method === 'number' ? '三数起课' : source.method === 'character' ? '三字起课' : source.method === 'random' ? '随机起课' : '时间起课'
+  const originalInput = source.method === 'character' ? source.entries.map((entry) => entry.original).join('') : result.inputs.join('、')
+  const sourceDetails = source.method === 'time'
+    ? `公历时间：${source.values.solarText}；农历日期：${source.values.lunarText}；时辰：${source.values.shichenName}；原始数字：${result.inputs.join('、')}`
+    : undefined
   return <section className="result-panel" aria-labelledby="result-title">
     <div className="result-layout">
       <div className="result-left">
-        <div className="result-header"><div><p className="eyebrow">起课结果</p><h2 id="result-title">{question || '未填写事项'}</h2><p className="result-summary">{result.ruleSystemId === 'classic-six' ? '六宫' : '九宫'} · {characterEntries ? '三字起课' : '三数起课'} · {result.inputs.join('、')}</p></div><button className="secondary-button" type="button" onClick={onBack}>重新起课</button></div>
+        <div className="result-header"><div><p className="eyebrow">起课结果</p><h2 id="result-title">{question || '未填写事项'}</h2><p className="result-summary">{result.ruleSystemId === 'classic-six' ? '六宫' : '九宫'} · {inputMethod} · {result.inputs.join('、')}</p></div><div className="result-actions"><button className="secondary-button" type="button" onClick={onBack}>重新起课</button>{source.method === 'random' && <button className="text-button compact-button" type="button" onClick={onRandomize}>换一组</button>}</div></div>
         <p className="result-meta">{result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）'} · 规则版本 {result.ruleVersion}</p>
-        {characterEntries ? <><p className="source-line">原始三字：{characterEntries.map((entry) => entry.original).join('')}<br />转换后的繁体三字：{characterEntries.map((entry) => entry.traditional).join('')}</p><div className="character-result">{characterEntries.map((entry) => <span key={entry.original}>{entry.original} → {entry.traditional}：数据 {entry.dataStrokeCount ?? '未找到'}，最终 {entry.finalStrokeCount}</span>)}</div><p className="data-note">笔画来源：{STROKE_DATA_SOURCE} · {STROKE_DATA_VERSION}</p></> : <p className="source-line">原始数字：{result.inputs.join('、')}</p>}
-        <LeftHandAnimation steps={result.steps} passes={passes} palaceCount={result.ruleSystemId === 'classic-six' ? 6 : 9} onCompleteChange={handleAnimationCompleteChange} />
+        {source.method === 'character' ? <><p className="source-line">原始三字：{source.entries.map((entry) => entry.original).join('')}<br />转换后的繁体三字：{source.entries.map((entry) => entry.traditional).join('')}</p><div className="character-result">{source.entries.map((entry) => <span key={entry.original}>{entry.original} → {entry.traditional}：数据 {entry.dataStrokeCount ?? '未找到'}，最终 {entry.finalStrokeCount}</span>)}</div><p className="data-note">笔画来源：{STROKE_DATA_SOURCE} · {STROKE_DATA_VERSION}</p></> : source.method === 'time' ? <p className="source-line">公历时间：{source.values.solarText}<br />农历日期：{source.values.lunarText} · 时辰：{source.values.shichenName}<br />原始数字：{result.inputs.join('、')}</p> : source.method === 'random' ? <p className="source-line">随机三数：{result.inputs.join('、')}</p> : <p className="source-line">原始数字：{result.inputs.join('、')}</p>}
+        <LeftHandAnimation key={`${result.ruleSystemId}-${result.inputs.join('-')}`} steps={result.steps} passes={passes} palaceCount={result.ruleSystemId === 'classic-six' ? 6 : 9} onCompleteChange={handleAnimationCompleteChange} />
       </div>
       {animationComplete && <div className="revealed-result">
         <div className="passes">{passes.map((palace, index) => <article className="pass-card" key={labels[index]}><p className="pass-label">{labels[index]}</p><h3>{palace.name}</h3><p>{palace.element} · {palace.direction || '方位未设定'}</p><p className="keywords">{palace.keywords.join('、')}</p></article>)}</div>
@@ -181,8 +264,9 @@ function ResultView({ result, question, characterEntries, onBack }: { result: Di
         <LocalGeminiInterpretation context={{
           question,
           systemName: result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）',
-          inputMethod: characterEntries ? '三字起课' : '三数起课',
-          originalInput: characterEntries ? characterEntries.map((entry) => entry.original).join('') : result.inputs.join('、'),
+          inputMethod,
+          originalInput,
+          sourceDetails,
           passes,
         }} />
       </div>}
