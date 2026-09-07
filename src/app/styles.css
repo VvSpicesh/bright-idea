@@ -172,8 +172,9 @@ h2 { margin: 0 0 8px; font-size: 1.35rem; }
   .result-left .hand-stage { width: clamp(150px, 26dvh, 230px); }
   .result-left .pass-results { gap: clamp(4px, .8dvh, 8px); }
   .result-left .pass-result { padding: clamp(5px, 1dvh, 9px); }
-  .revealed-result { margin-top: 0; padding-right: 4px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+  .revealed-result { display: grid; margin-top: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
   .revealed-result .passes { margin-top: 0; }
+  .revealed-result > .interpretation { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
   .revealed-result .ai-export-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
   .revealed-result .ai-export-actions button { min-width: 0; padding-inline: 5px; }
 }
