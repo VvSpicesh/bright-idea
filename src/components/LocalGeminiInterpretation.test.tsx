@@ -1,81 +1,71 @@
-import { webcrypto } from 'node:crypto'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { storeEncryptedGeminiKey } from '../features/ai/localGemini'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { buildAiInterpretationPrompt } from '../features/ai/aiPrompt'
 import { LocalGeminiInterpretation } from './LocalGeminiInterpretation'
 
 const context = {
-  question: '测试事项',
+  question: '合作是否适合继续？',
   systemName: '六宫小六壬',
   inputMethod: '三数起课',
   originalInput: '1、2、3',
   passes: [
-    { name: '大安', element: '木', keywords: ['安定'] },
+    { name: '大安', element: '木', keywords: ['安定'], direction: '正东' },
     { name: '留连', element: '土', keywords: ['拖延'] },
-    { name: '赤口', element: '金', keywords: ['口舌'] },
+    { name: '赤口', element: '金', keywords: ['口舌'], direction: '正西' },
   ],
 }
 
-describe('本机 AI 配置界面', () => {
-  beforeAll(() => vi.stubGlobal('crypto', webcrypto as unknown as Crypto))
-  afterAll(() => vi.unstubAllGlobals())
-  beforeEach(() => localStorage.clear())
+describe('AI 提示词导出', () => {
+  const writeText = vi.fn()
 
-  it('sets up encrypted storage and can clear the device configuration', async () => {
-    render(<LocalGeminiInterpretation context={context} />)
-    fireEvent.click(screen.getByRole('button', { name: 'AI解读' }))
-    fireEvent.change(screen.getByLabelText('Gemini API Key'), { target: { value: 'gemini-secret-key' } })
-    fireEvent.change(screen.getByLabelText('本地解锁密码'), { target: { value: 'local-password' } })
-    fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'local-password' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存并解锁' }))
-
-    await waitFor(() => expect(screen.getByRole('button', { name: '生成AI解读' })).toBeInTheDocument())
-    expect(localStorage.getItem('bright-idea:gemini-key')).not.toContain('gemini-secret-key')
-    fireEvent.click(screen.getByRole('button', { name: '清除本机AI配置' }))
-    expect(localStorage.getItem('bright-idea:gemini-key')).toBeNull()
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    writeText.mockReset()
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
   })
 
-  it('shows a clear error when the unlock password is wrong', async () => {
-    await storeEncryptedGeminiKey('gemini-secret-key', 'local-password')
-    render(<LocalGeminiInterpretation context={context} />)
-    fireEvent.click(screen.getByRole('button', { name: 'AI解读' }))
-    fireEvent.change(screen.getByLabelText('本地解锁密码'), { target: { value: 'wrong-password' } })
-    fireEvent.click(screen.getByRole('button', { name: '解锁AI解读' }))
+  it('builds a complete prompt and defaults to a comprehensive interpretation', () => {
+    const prompt = buildAiInterpretationPrompt(context, '')
 
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('密码错误，无法解锁本机 AI 配置'))
+    expect(prompt).toContain('用户问题：合作是否适合继续？')
+    expect(prompt).toContain('起课体系：六宫小六壬')
+    expect(prompt).toContain('起课方式：三数起课')
+    expect(prompt).toContain('原始输入：1、2、3')
+    expect(prompt).toContain('初传：大安；五行：木；方位：正东；关键词：安定')
+    expect(prompt).toContain('中传：留连；五行：土；方位：未设定；关键词：拖延')
+    expect(prompt).toContain('末传：赤口；五行：金；方位：正西；关键词：口舌')
+    expect(prompt).toContain('请综合解读整个卦象')
+    expect(prompt).toContain('分析前期、过程、结果，以及初传、中传、末传之间的关系')
+    expect(prompt).toContain('不得修改、质疑或重新计算程序计算出的卦象')
+    expect(prompt).toContain('区分传统象义和现实事实')
+    expect(prompt).toContain('不得给出确定性的死亡、医疗、法律或投资结论')
   })
 
-  it('keeps encrypted configuration when a Gemini request fails', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+  it('copies the current prompt before opening the selected AI site', async () => {
+    const calls: string[] = []
+    writeText.mockImplementation(async () => { calls.push('copy') })
+    const open = vi.spyOn(window, 'open').mockImplementation(() => { calls.push('open'); return null })
     render(<LocalGeminiInterpretation context={context} />)
-    fireEvent.click(screen.getByRole('button', { name: 'AI解读' }))
-    fireEvent.change(screen.getByLabelText('Gemini API Key'), { target: { value: 'gemini-secret-key' } })
-    fireEvent.change(screen.getByLabelText('本地解锁密码'), { target: { value: 'local-password' } })
-    fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'local-password' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存并解锁' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: '生成AI解读' })).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText(/你想问什么/), { target: { value: '重点看合作风险' } })
 
-    const encryptedConfiguration = localStorage.getItem('bright-idea:gemini-key')
-    fireEvent.click(screen.getByRole('button', { name: '生成AI解读' }))
+    fireEvent.click(screen.getByRole('button', { name: 'ChatGPT' }))
 
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('浏览器连接被拦截'))
-    expect(localStorage.getItem('bright-idea:gemini-key')).toBe(encryptedConfiguration)
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('提示词已复制，请在AI中粘贴发送'))
+    expect(calls).toEqual(['copy', 'open'])
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('本次希望重点询问：重点看合作风险'))
+    expect(open).toHaveBeenCalledWith('https://chatgpt.com/', '_blank', 'noopener,noreferrer')
   })
 
-  it('shows the model used for a successful interpretation', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({
-      candidates: [{ content: { parts: [{ text: '测试解读' }] } }],
-    }))
+  it('shows the complete prompt for long-press copying when clipboard access fails', async () => {
+    writeText.mockRejectedValue(new Error('Clipboard unavailable'))
+    vi.spyOn(window, 'open').mockReturnValue(null)
     render(<LocalGeminiInterpretation context={context} />)
-    fireEvent.click(screen.getByRole('button', { name: 'AI解读' }))
-    fireEvent.change(screen.getByLabelText('Gemini API Key'), { target: { value: 'gemini-secret-key' } })
-    fireEvent.change(screen.getByLabelText('本地解锁密码'), { target: { value: 'local-password' } })
-    fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'local-password' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存并解锁' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: '生成AI解读' })).toBeInTheDocument())
 
-    fireEvent.click(screen.getByRole('button', { name: '生成AI解读' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Gemini' }))
 
-    await waitFor(() => expect(screen.getByText('使用模型：gemini-2.5-flash')).toBeInTheDocument())
+    const promptField = await screen.findByLabelText('可手动复制的提示词')
+    expect(promptField).toHaveValue(buildAiInterpretationPrompt(context, ''))
+    expect(screen.getByRole('status')).toHaveTextContent('自动复制失败，请长按下方提示词手动复制')
+    expect(window.open).toHaveBeenCalledWith('https://gemini.google.com/app', '_blank', 'noopener,noreferrer')
   })
 })

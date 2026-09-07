@@ -44,7 +44,7 @@ describe('三数起课应用流程', () => {
     fireEvent.click(screen.getByRole('button', { name: '跳过动画' }))
     expect(screen.getAllByRole('heading', { name: '大安' })).toHaveLength(3)
     expect(screen.getByRole('heading', { name: '综合结论' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'AI解读' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'AI辅助解读' })).toBeInTheDocument()
     const details = screen.getByText('查看详细解读').closest('details')
     expect(details).not.toHaveAttribute('open')
     fireEvent.click(screen.getByText('查看详细解读'))
