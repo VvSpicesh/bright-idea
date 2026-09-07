@@ -1,0 +1,11 @@
+{
+  "name": "bright-idea-ai",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "vars": {
+    "AI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "AI_MODEL": "gemini-3.8-flash",
+    "ALLOWED_ORIGIN": "https://vvspicesh.github.io"
+  }
+}
