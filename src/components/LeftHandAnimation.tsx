@@ -89,7 +89,11 @@ function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
 }
 
-export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange }: { steps: readonly [CalculationStep, CalculationStep, CalculationStep]; passes: readonly [Palace, Palace, Palace]; palaceCount: number; onCompleteChange?: (complete: boolean) => void }) {
+export function PassResults({ passes, completed, onSelect }: { passes: readonly [Palace, Palace, Palace]; completed: number; onSelect: (index: number) => void }) {
+  return <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => onSelect(index)} disabled={completed <= index} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong>{completed > index ? palace.name : '待落宫'}</button>)}</div>
+}
+
+export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange, hidePassResults = false, onCompletedChange, onPassSelectReady }: { steps: readonly [CalculationStep, CalculationStep, CalculationStep]; passes: readonly [Palace, Palace, Palace]; palaceCount: number; onCompleteChange?: (complete: boolean) => void; hidePassResults?: boolean; onCompletedChange?: (completed: number) => void; onPassSelectReady?: (select: (index: number) => void) => void }) {
   const points = getHandPoints(palaceCount)
   const timing = getAnimationTiming(steps, palaceCount)
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
@@ -103,7 +107,12 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
 
   const finishImmediately = () => { setPlaying(false); setTrails([]); setActiveIndex(passes[2].index); setActivePass(2); setCompleted(3); onCompleteChange?.(true) }
   const play = () => { setPlaybackRun((run) => run + 1); setPlaying(true); setTrails([]); setActiveIndex(null); setActivePass(null); setCompleted(0); onCompleteChange?.(false) }
-  const showPass = (index: number) => { setPlaying(false); setTrails([]); setActiveIndex(passes[index].index); setActivePass(index); setCompleted(Math.max(completed, index + 1)) }
+  const showPass = (index: number) => { setPlaying(false); setTrails([]); setActiveIndex(passes[index].index); setActivePass(index); setCompleted((current) => Math.max(current, index + 1)) }
+  const showPassRef = useRef(showPass)
+  showPassRef.current = showPass
+
+  useEffect(() => { onPassSelectReady?.((index) => showPassRef.current(index)) }, [onPassSelectReady])
+  useEffect(() => { onCompletedChange?.(completed) }, [completed, onCompletedChange])
 
   useEffect(() => {
     if (reducedMotion) {
@@ -168,7 +177,7 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
         {activePoint && <span className="active-marker-position" style={{ left: `${activePoint.x}%`, top: `${activePoint.y}%`, transitionDuration: `${Math.min(timing.stepDurationMs, 120)}ms` }}><span className="active-marker" /></span>}
       </div>
     </div>
-    <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => showPass(index)} disabled={completed <= index} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong>{completed > index ? palace.name : '待落宫'}</button>)}</div>
+    {!hidePassResults && <PassResults passes={passes} completed={completed} onSelect={showPass} />}
     {playing && activePass !== null && Number(steps[activePass].rounds) > 0 && <p className="round-note">完整圈 ×{steps[activePass].rounds}圈，再走余数路径</p>}
   </section>
 }
