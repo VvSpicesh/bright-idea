@@ -44,4 +44,21 @@ describe('本机 AI 配置界面', () => {
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('密码错误，无法解锁本机 AI 配置'))
   })
+
+  it('keeps encrypted configuration when a Gemini request fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+    render(<LocalGeminiInterpretation context={context} />)
+    fireEvent.click(screen.getByRole('button', { name: 'AI解读' }))
+    fireEvent.change(screen.getByLabelText('Gemini API Key'), { target: { value: 'gemini-secret-key' } })
+    fireEvent.change(screen.getByLabelText('本地解锁密码'), { target: { value: 'local-password' } })
+    fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'local-password' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存并解锁' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '生成AI解读' })).toBeInTheDocument())
+
+    const encryptedConfiguration = localStorage.getItem('bright-idea:gemini-key')
+    fireEvent.click(screen.getByRole('button', { name: '生成AI解读' }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('浏览器连接被拦截'))
+    expect(localStorage.getItem('bright-idea:gemini-key')).toBe(encryptedConfiguration)
+  })
 })

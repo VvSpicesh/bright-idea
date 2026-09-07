@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   clearStoredGeminiKey,
+  GeminiRequestError,
   hasStoredGeminiKey,
   requestGeminiInterpretation,
   storeEncryptedGeminiKey,
@@ -75,8 +76,10 @@ export function LocalGeminiInterpretation({ context }: { context: GeminiDivinati
       const text = await requestGeminiInterpretation(apiKey, context, previousHistory, question)
       const nextHistory: GeminiChatMessage[] = [...previousHistory, { role: 'user', text: question }, { role: 'model', text }]
       setHistory(nextHistory.slice(-10))
-    } catch {
-      setError('AI 解读请求失败，请检查 API Key、网络或模型权限后重试')
+    } catch (requestError) {
+      setError(requestError instanceof GeminiRequestError
+        ? requestError.message
+        : 'AI 解读发生未知错误，请重试')
     } finally {
       setBusy(false)
     }

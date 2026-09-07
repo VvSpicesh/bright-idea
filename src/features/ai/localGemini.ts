@@ -4,6 +4,7 @@ export const GEMINI_KEY_STORAGE = 'bright-idea:gemini-key'
 const STORAGE_VERSION = 1
 const PBKDF2_ITERATIONS = 250_000
 const MAX_HISTORY_MESSAGES = 10
+const MAX_ERROR_DETAIL_LENGTH = 300
 
 export interface StoredGeminiKey {
   version: 1
@@ -28,6 +29,20 @@ export interface GeminiDivinationContext {
     direction?: string
     keywords: readonly string[]
   }>
+}
+
+export type GeminiRequestErrorKind = 'http' | 'connection' | 'response'
+
+export class GeminiRequestError extends Error {
+  readonly kind: GeminiRequestErrorKind
+  readonly status?: number
+
+  constructor(kind: GeminiRequestErrorKind, message: string, status?: number) {
+    super(message)
+    this.name = 'GeminiRequestError'
+    this.kind = kind
+    this.status = status
+  }
 }
 
 const SYSTEM_INSTRUCTION = `你是小六壬卦象解读助手。程序提供的体系和初传、中传、末传是已经确定的排盘结果。
@@ -116,6 +131,35 @@ export function clearStoredGeminiKey(storage: Storage = localStorage): void {
   storage.removeItem(GEMINI_KEY_STORAGE)
 }
 
+function safeGoogleErrorMessage(value: unknown, apiKey: string): string | null {
+  if (!value || typeof value !== 'object') return null
+  const error = (value as { error?: unknown }).error
+  if (!error || typeof error !== 'object') return null
+  const message = (error as { message?: unknown }).message
+  if (typeof message !== 'string' || !message.trim()) return null
+  return message
+    .replaceAll(apiKey, '[已隐藏]')
+    .replace(/(?:key|api[_ -]?key)\s*[=:]\s*[^\s,;]+/gi, 'API Key=[已隐藏]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_ERROR_DETAIL_LENGTH)
+}
+
+async function parseHttpError(response: Response, apiKey: string): Promise<GeminiRequestError> {
+  let detail: string | null = null
+  try {
+    detail = safeGoogleErrorMessage(await response.json(), apiKey)
+  } catch {
+    // Do not expose an unstructured response body because it may echo request data.
+  }
+  const statusLabel = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`
+  return new GeminiRequestError(
+    'http',
+    `Gemini 请求失败（HTTP ${statusLabel}）${detail ? `：${detail}` : ''}`,
+    response.status,
+  )
+}
+
 export async function requestGeminiInterpretation(
   apiKey: string,
   context: GeminiDivinationContext,
@@ -136,27 +180,48 @@ export async function requestGeminiInterpretation(
     })),
   })
   const recentHistory = history.slice(-MAX_HISTORY_MESSAGES)
-  const response = await fetch(GEMINI_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-      contents: [
-        { role: 'user', parts: [{ text: `以下是程序已经确定的排盘上下文，不得修改：\n${contextText}` }] },
-        ...recentHistory.map((message) => ({ role: message.role, parts: [{ text: message.text }] })),
-        { role: 'user', parts: [{ text: prompt }] },
-      ],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 800 },
-    }),
-    signal: AbortSignal.timeout(30_000),
-  })
+  const historyText = recentHistory
+    .map((message) => `${message.role === 'user' ? '用户' : 'Gemini'}：${message.text}`)
+    .join('\n')
+  const requestText = [
+    SYSTEM_INSTRUCTION,
+    `以下是程序已经确定的排盘上下文，不得修改：\n${contextText}`,
+    historyText ? `同一排盘的最近对话：\n${historyText}` : '',
+    `本次问题：\n${prompt}`,
+  ].filter(Boolean).join('\n\n')
 
-  if (!response.ok) throw new Error('GEMINI_REQUEST_FAILED')
-  const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
-  const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('').trim()
-  if (!text) throw new Error('GEMINI_EMPTY_RESPONSE')
+  let response: Response
+  try {
+    response = await fetch(GEMINI_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: requestText }] }],
+      }),
+      signal: AbortSignal.timeout(30_000),
+    })
+  } catch {
+    throw new GeminiRequestError('connection', '浏览器连接被拦截，请检查 CORS、CSP、网络或浏览器扩展后重试')
+  }
+
+  if (!response.ok) throw await parseHttpError(response, apiKey)
+
+  let data: unknown
+  try {
+    data = await response.json()
+  } catch {
+    throw new GeminiRequestError('response', 'Gemini 响应结构异常：返回内容不是有效 JSON')
+  }
+  const parts = (data as { candidates?: Array<{ content?: { parts?: unknown } }> })?.candidates?.[0]?.content?.parts
+  if (!Array.isArray(parts)) throw new GeminiRequestError('response', 'Gemini 响应结构异常：缺少候选内容')
+  const text = parts
+    .filter((part): part is { text: string } => Boolean(part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string'))
+    .map((part) => part.text)
+    .join('')
+    .trim()
+  if (!text) throw new GeminiRequestError('response', 'Gemini 响应结构异常：候选内容中没有文本')
   return text
 }
