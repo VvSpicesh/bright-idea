@@ -80,6 +80,7 @@ describe('三数起课应用流程', () => {
 
   it('allows navigation to unfinished sections', () => {
     render(<App />)
+    expect(screen.getByText('传统文化研究与娱乐用途，不构成现实领域的专业建议。').closest('header')).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: '主要导航' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '记录' }))
     expect(screen.getByText('记录功能后续开放。')).toBeInTheDocument()

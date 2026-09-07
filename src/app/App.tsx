@@ -90,11 +90,10 @@ export function App() {
       <main className={result && activeSection === '起课' ? 'main-content has-result' : 'main-content'}>
         <header className="brand-block">
           <p className="app-title">小六壬掌诀</p>
+          <p className="disclaimer">传统文化研究与娱乐用途，不构成现实领域的专业建议。</p>
         </header>
 
         {renderNavigationPage()}
-
-        <p className="disclaimer">传统文化研究与娱乐用途，不构成现实领域的专业建议。</p>
       </main>
 
       <nav className="bottom-nav" aria-label="主要导航">
