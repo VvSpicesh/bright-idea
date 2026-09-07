@@ -19,6 +19,7 @@ export function LocalGeminiInterpretation({ context }: { context: GeminiDivinati
   const [confirmation, setConfirmation] = useState('')
   const [followUp, setFollowUp] = useState('')
   const [history, setHistory] = useState<GeminiChatMessage[]>([])
+  const [usedModel, setUsedModel] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -73,9 +74,10 @@ export function LocalGeminiInterpretation({ context }: { context: GeminiDivinati
     setError('')
     setFollowUp('')
     try {
-      const text = await requestGeminiInterpretation(apiKey, context, previousHistory, question)
-      const nextHistory: GeminiChatMessage[] = [...previousHistory, { role: 'user', text: question }, { role: 'model', text }]
+      const result = await requestGeminiInterpretation(apiKey, context, previousHistory, question)
+      const nextHistory: GeminiChatMessage[] = [...previousHistory, { role: 'user', text: question }, { role: 'model', text: result.text }]
       setHistory(nextHistory.slice(-10))
+      setUsedModel(result.model)
     } catch (requestError) {
       setError(requestError instanceof GeminiRequestError
         ? requestError.message
@@ -89,6 +91,7 @@ export function LocalGeminiInterpretation({ context }: { context: GeminiDivinati
     clearStoredGeminiKey()
     setApiKey(null)
     setHistory([])
+    setUsedModel('')
     setPassword('')
     setError('本机 AI 配置已清除')
     setView('setup')
@@ -117,6 +120,7 @@ export function LocalGeminiInterpretation({ context }: { context: GeminiDivinati
       {history.length === 0
         ? <button className="primary-button" type="button" disabled={busy} onClick={() => void ask('请解读这个排盘，并说明象义、现实判断和判断依据。')}>{busy ? '正在解读…' : '生成AI解读'}</button>
         : <div className="ai-messages" aria-live="polite">{history.map((message, index) => <article className={`ai-message is-${message.role}`} key={`${message.role}-${index}`}><strong>{message.role === 'user' ? '你' : 'Gemini'}</strong><p>{message.text}</p></article>)}</div>}
+      {usedModel && <small className="pass-label">使用模型：{usedModel}</small>}
       {history.length > 0 && <form className="ai-follow-up" onSubmit={(event) => { event.preventDefault(); void ask(followUp) }}>
         <label htmlFor="ai-follow-up">继续追问</label>
         <div><input id="ai-follow-up" maxLength={2_000} value={followUp} onChange={(event) => setFollowUp(event.target.value)} placeholder="围绕同一排盘追问" /><button type="submit" disabled={busy || !followUp.trim()}>{busy ? '发送中…' : '发送'}</button></div>

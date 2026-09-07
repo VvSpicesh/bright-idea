@@ -3,7 +3,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import {
   clearStoredGeminiKey,
   GEMINI_ENDPOINT,
+  GEMINI_FALLBACK_ENDPOINT,
+  GEMINI_FALLBACK_MODEL,
   GEMINI_KEY_STORAGE,
+  GEMINI_PRIMARY_MODEL,
   requestGeminiInterpretation,
   storeEncryptedGeminiKey,
   unlockGeminiKey,
@@ -55,7 +58,7 @@ describe('本机 Gemini 密钥与请求', () => {
       '请继续说明',
     )
 
-    expect(result).toBe('象义解读')
+    expect(result).toEqual({ text: '象义解读', model: GEMINI_PRIMARY_MODEL })
     expect(fetchMock).toHaveBeenCalledOnce()
     const [url, options] = fetchMock.mock.calls[0]
     expect(url).toBe(GEMINI_ENDPOINT)
@@ -80,7 +83,8 @@ describe('本机 Gemini 密钥与请求', () => {
       candidates: [{ content: { parts: [{ text: '第一段' }, { inlineData: {} }, { text: '第二段' }] } }],
     }))
 
-    await expect(requestGeminiInterpretation('secret', context, [], '解读')).resolves.toBe('第一段第二段')
+    await expect(requestGeminiInterpretation('secret', context, [], '解读'))
+      .resolves.toEqual({ text: '第一段第二段', model: GEMINI_PRIMARY_MODEL })
   })
 
   it('reports HTTP status and a safe Google error without exposing the key', async () => {
@@ -89,8 +93,9 @@ describe('本机 Gemini 密钥与请求', () => {
     }, { status: 400, statusText: 'Bad Request' }))
 
     const request = requestGeminiInterpretation('gemini-secret-key', context, [], '解读')
-    await expect(request).rejects.toThrow('Gemini 请求失败（HTTP 400 Bad Request）：API Key=[已隐藏] is invalid')
+    await expect(request).rejects.toThrow(`${GEMINI_PRIMARY_MODEL} 请求失败（HTTP 400 Bad Request）：API Key=[已隐藏] is invalid`)
     await expect(request).rejects.not.toThrow('gemini-secret-key')
+    expect(fetch).toHaveBeenCalledOnce()
   })
 
   it('classifies fetch failures as a blocked browser connection', async () => {
@@ -105,5 +110,34 @@ describe('本机 Gemini 密钥与请求', () => {
 
     await expect(requestGeminiInterpretation('secret', context, [], '解读'))
       .rejects.toThrow('Gemini 响应结构异常：缺少候选内容')
+  })
+
+  it.each([429, 503])('uses the fallback model once when the primary returns HTTP %s', async (status) => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(Response.json({ error: { message: 'Primary unavailable' } }, { status }))
+      .mockResolvedValueOnce(Response.json({ candidates: [{ content: { parts: [{ text: '备用结果' }] } }] }))
+
+    await expect(requestGeminiInterpretation('secret', context, [], '解读'))
+      .resolves.toEqual({ text: '备用结果', model: GEMINI_FALLBACK_MODEL })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0][0]).toBe(GEMINI_ENDPOINT)
+    expect(fetchMock.mock.calls[1][0]).toBe(GEMINI_FALLBACK_ENDPOINT)
+  })
+
+  it('reports both safe HTTP failures without exposing the API key or request', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(Response.json({
+        error: { message: 'Quota exhausted for API key=gemini-secret-key' },
+      }, { status: 429 }))
+      .mockResolvedValueOnce(Response.json({
+        error: { message: 'Service unavailable for API key=gemini-secret-key' },
+      }, { status: 503 }))
+
+    const request = requestGeminiInterpretation('gemini-secret-key', context, [], '完整私密问题')
+    await expect(request).rejects.toThrow('HTTP 429')
+    await expect(request).rejects.toThrow('HTTP 503')
+    await expect(request).rejects.not.toThrow('gemini-secret-key')
+    await expect(request).rejects.not.toThrow('完整私密问题')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

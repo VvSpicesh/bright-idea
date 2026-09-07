@@ -1,4 +1,7 @@
-export const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent'
+export const GEMINI_PRIMARY_MODEL = 'gemini-2.5-flash'
+export const GEMINI_FALLBACK_MODEL = 'gemini-3.1-flash-lite'
+export const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_PRIMARY_MODEL}:generateContent`
+export const GEMINI_FALLBACK_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FALLBACK_MODEL}:generateContent`
 export const GEMINI_KEY_STORAGE = 'bright-idea:gemini-key'
 
 const STORAGE_VERSION = 1
@@ -29,6 +32,11 @@ export interface GeminiDivinationContext {
     direction?: string
     keywords: readonly string[]
   }>
+}
+
+export interface GeminiInterpretationResult {
+  text: string
+  model: string
 }
 
 export type GeminiRequestErrorKind = 'http' | 'connection' | 'response'
@@ -145,7 +153,7 @@ function safeGoogleErrorMessage(value: unknown, apiKey: string): string | null {
     .slice(0, MAX_ERROR_DETAIL_LENGTH)
 }
 
-async function parseHttpError(response: Response, apiKey: string): Promise<GeminiRequestError> {
+async function parseHttpError(response: Response, apiKey: string, model: string): Promise<GeminiRequestError> {
   let detail: string | null = null
   try {
     detail = safeGoogleErrorMessage(await response.json(), apiKey)
@@ -155,9 +163,49 @@ async function parseHttpError(response: Response, apiKey: string): Promise<Gemin
   const statusLabel = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`
   return new GeminiRequestError(
     'http',
-    `Gemini 请求失败（HTTP ${statusLabel}）${detail ? `：${detail}` : ''}`,
+    `${model} 请求失败（HTTP ${statusLabel}）${detail ? `：${detail}` : ''}`,
     response.status,
   )
+}
+
+async function requestModel(
+  endpoint: string,
+  model: string,
+  apiKey: string,
+  body: string,
+): Promise<GeminiInterpretationResult> {
+  let response: Response
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body,
+      signal: AbortSignal.timeout(30_000),
+    })
+  } catch {
+    throw new GeminiRequestError('connection', '浏览器连接被拦截，请检查 CORS、CSP、网络或浏览器扩展后重试')
+  }
+
+  if (!response.ok) throw await parseHttpError(response, apiKey, model)
+
+  let data: unknown
+  try {
+    data = await response.json()
+  } catch {
+    throw new GeminiRequestError('response', 'Gemini 响应结构异常：返回内容不是有效 JSON')
+  }
+  const parts = (data as { candidates?: Array<{ content?: { parts?: unknown } }> })?.candidates?.[0]?.content?.parts
+  if (!Array.isArray(parts)) throw new GeminiRequestError('response', 'Gemini 响应结构异常：缺少候选内容')
+  const text = parts
+    .filter((part): part is { text: string } => Boolean(part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string'))
+    .map((part) => part.text)
+    .join('')
+    .trim()
+  if (!text) throw new GeminiRequestError('response', 'Gemini 响应结构异常：候选内容中没有文本')
+  return { text, model }
 }
 
 export async function requestGeminiInterpretation(
@@ -165,7 +213,7 @@ export async function requestGeminiInterpretation(
   context: GeminiDivinationContext,
   history: readonly GeminiChatMessage[],
   prompt: string,
-): Promise<string> {
+): Promise<GeminiInterpretationResult> {
   const contextText = JSON.stringify({
     用户问题: context.question,
     起课体系: context.systemName,
@@ -190,38 +238,28 @@ export async function requestGeminiInterpretation(
     `本次问题：\n${prompt}`,
   ].filter(Boolean).join('\n\n')
 
-  let response: Response
-  try {
-    response = await fetch(GEMINI_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: requestText }] }],
-      }),
-      signal: AbortSignal.timeout(30_000),
-    })
-  } catch {
-    throw new GeminiRequestError('connection', '浏览器连接被拦截，请检查 CORS、CSP、网络或浏览器扩展后重试')
-  }
+  const body = JSON.stringify({
+    contents: [{ role: 'user', parts: [{ text: requestText }] }],
+  })
 
-  if (!response.ok) throw await parseHttpError(response, apiKey)
-
-  let data: unknown
   try {
-    data = await response.json()
-  } catch {
-    throw new GeminiRequestError('response', 'Gemini 响应结构异常：返回内容不是有效 JSON')
+    return await requestModel(GEMINI_ENDPOINT, GEMINI_PRIMARY_MODEL, apiKey, body)
+  } catch (primaryError) {
+    if (!(primaryError instanceof GeminiRequestError)
+      || primaryError.kind !== 'http'
+      || (primaryError.status !== 429 && primaryError.status !== 503)) throw primaryError
+
+    try {
+      return await requestModel(GEMINI_FALLBACK_ENDPOINT, GEMINI_FALLBACK_MODEL, apiKey, body)
+    } catch (fallbackError) {
+      const fallbackSummary = fallbackError instanceof GeminiRequestError
+        ? fallbackError.message
+        : `${GEMINI_FALLBACK_MODEL} 请求失败（未知错误）`
+      throw new GeminiRequestError(
+        fallbackError instanceof GeminiRequestError ? fallbackError.kind : 'response',
+        `Gemini 主备模型均请求失败：${primaryError.message}；${fallbackSummary}`,
+        fallbackError instanceof GeminiRequestError ? fallbackError.status : undefined,
+      )
+    }
   }
-  const parts = (data as { candidates?: Array<{ content?: { parts?: unknown } }> })?.candidates?.[0]?.content?.parts
-  if (!Array.isArray(parts)) throw new GeminiRequestError('response', 'Gemini 响应结构异常：缺少候选内容')
-  const text = parts
-    .filter((part): part is { text: string } => Boolean(part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string'))
-    .map((part) => part.text)
-    .join('')
-    .trim()
-  if (!text) throw new GeminiRequestError('response', 'Gemini 响应结构异常：候选内容中没有文本')
-  return text
 }

@@ -61,4 +61,21 @@ describe('本机 AI 配置界面', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('浏览器连接被拦截'))
     expect(localStorage.getItem('bright-idea:gemini-key')).toBe(encryptedConfiguration)
   })
+
+  it('shows the model used for a successful interpretation', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({
+      candidates: [{ content: { parts: [{ text: '测试解读' }] } }],
+    }))
+    render(<LocalGeminiInterpretation context={context} />)
+    fireEvent.click(screen.getByRole('button', { name: 'AI解读' }))
+    fireEvent.change(screen.getByLabelText('Gemini API Key'), { target: { value: 'gemini-secret-key' } })
+    fireEvent.change(screen.getByLabelText('本地解锁密码'), { target: { value: 'local-password' } })
+    fireEvent.change(screen.getByLabelText('确认密码'), { target: { value: 'local-password' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存并解锁' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '生成AI解读' })).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: '生成AI解读' }))
+
+    await waitFor(() => expect(screen.getByText('使用模型：gemini-2.5-flash')).toBeInTheDocument())
+  })
 })
