@@ -272,12 +272,12 @@ function ResultView({ result, question, source, onBack, onRandomize }: { result:
         </div>
         <PassResults passes={passes} completed={completedPasses} onSelect={handlePassSelect} />
       </div>
-      {animationComplete && <div className="revealed-result">
-        <div className="result-right-top">
+      <div className="revealed-result">
+        <div className={animationComplete ? 'result-right-top' : 'result-right-top is-animation-pending'} aria-hidden={!animationComplete}>
           <div className="passes">{passes.map((palace, index) => <article className="pass-card" key={labels[index]}><p className="pass-label">{labels[index]}</p><h3>{palace.name}</h3><p>{palace.element} · {palace.direction || '方位未设定'}</p><p className="keywords">{palace.keywords.join('、')}</p></article>)}</div>
           <DivinationInterpretation passes={passes} />
         </div>
-        <LocalGeminiInterpretation context={{
+        <LocalGeminiInterpretation pending={!animationComplete} context={{
           question,
           systemName: result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）',
           inputMethod,
@@ -285,7 +285,7 @@ function ResultView({ result, question, source, onBack, onRandomize }: { result:
           sourceDetails,
           passes,
         }} />
-      </div>}
+      </div>
     </div>
   </section>
 }

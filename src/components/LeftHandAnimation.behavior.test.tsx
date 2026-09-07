@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, act } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { calculateThreePasses, classicSixRules, xunNineRules } from '../rules'
-import { getAnimationPath, getAnimationTiming, LEFT_PALM_IMAGE, LeftHandAnimation } from './LeftHandAnimation'
+import { getAnimationPath, getAnimationTiming, LEFT_PALM_IMAGE, LeftHandAnimation, PassResults } from './LeftHandAnimation'
 
 const result = calculateThreePasses(classicSixRules, [1n, 2n, 3n])
 const props = { steps: result.steps, passes: [result.first, result.second, result.third] as const, palaceCount: 6 }
@@ -147,5 +147,26 @@ describe('左手掐诀播放控制', () => {
     act(() => { vi.advanceTimersByTime(180 + passDurations[2]) })
 
     expect(onCompletedChange.mock.calls.map(([value]) => value)).toEqual([1, 2, 3])
+  })
+
+  it('keeps all summary card elements mounted while results land', () => {
+    const six = calculateThreePasses(classicSixRules, [16n, 12n, 9n])
+    const passes = [six.first, six.second, six.third] as const
+    const { container, rerender } = render(<PassResults passes={passes} completed={0} onSelect={vi.fn()} />)
+    const cards = Array.from(container.querySelectorAll<HTMLButtonElement>('.pass-result'))
+    expect(cards).toHaveLength(3)
+    expect(cards.map((card) => card.querySelector('.pass-result-value')?.className)).toEqual([
+      'pass-result-value is-pending',
+      'pass-result-value is-pending',
+      'pass-result-value is-pending',
+    ])
+
+    rerender(<PassResults passes={passes} completed={1} onSelect={vi.fn()} />)
+    expect(Array.from(container.querySelectorAll('.pass-result'))).toEqual(cards)
+    rerender(<PassResults passes={passes} completed={2} onSelect={vi.fn()} />)
+    expect(Array.from(container.querySelectorAll('.pass-result'))).toEqual(cards)
+    rerender(<PassResults passes={passes} completed={3} onSelect={vi.fn()} />)
+    expect(Array.from(container.querySelectorAll('.pass-result'))).toEqual(cards)
+    expect(container.querySelectorAll('.pass-result-value.is-pending')).toHaveLength(0)
   })
 })

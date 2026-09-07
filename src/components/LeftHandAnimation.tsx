@@ -90,7 +90,7 @@ function prefersReducedMotion(): boolean {
 }
 
 export function PassResults({ passes, completed, onSelect }: { passes: readonly [Palace, Palace, Palace]; completed: number; onSelect: (index: number) => void }) {
-  return <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => onSelect(index)} disabled={completed <= index} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong>{completed > index ? palace.name : '待落宫'}</button>)}</div>
+  return <div className="pass-results" aria-live="polite">{passes.map((palace, index) => <button className={completed > index ? 'pass-result is-done' : 'pass-result'} type="button" onClick={() => onSelect(index)} disabled={completed <= index} key={palace.name + index}><strong>{['初传', '中传', '末传'][index]}</strong><span className={completed > index ? 'pass-result-value' : 'pass-result-value is-pending'}>{completed > index ? palace.name : '待落宫'}</span></button>)}</div>
 }
 
 export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange, hidePassResults = false, onCompletedChange, onPassSelectReady, runId = 0 }: { steps: readonly [CalculationStep, CalculationStep, CalculationStep]; passes: readonly [Palace, Palace, Palace]; palaceCount: number; onCompleteChange?: (complete: boolean) => void; hidePassResults?: boolean; onCompletedChange?: (completed: number) => void; onPassSelectReady?: (select: (index: number) => void) => void; runId?: number }) {

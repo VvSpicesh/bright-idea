@@ -10,7 +10,7 @@ const AI_SITES = [
   { name: 'Kimi', url: 'https://kimi.moonshot.cn/' },
 ] as const
 
-export function LocalGeminiInterpretation({ context }: { context: AiPromptContext }) {
+export function LocalGeminiInterpretation({ context, pending = false }: { context: AiPromptContext; pending?: boolean }) {
   const [aiQuestion, setAiQuestion] = useState(context.question)
   const [status, setStatus] = useState('')
   const [showPrompt, setShowPrompt] = useState(false)
@@ -41,7 +41,7 @@ export function LocalGeminiInterpretation({ context }: { context: AiPromptContex
     if (copied) setStatus('提示词已复制，请在AI中粘贴发送')
   }
 
-  return <section className="ai-export" aria-labelledby="ai-export-title">
+  return <section className={pending ? 'ai-export is-animation-pending' : 'ai-export'} aria-hidden={pending || undefined} aria-labelledby="ai-export-title">
     <div className="ai-export-heading">
       <h3 id="ai-export-title">AI辅助解读</h3>
       {status && <span role="status">{status}</span>}
