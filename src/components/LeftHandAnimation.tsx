@@ -130,7 +130,6 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
   ])
   const timing = animationPlan.timing
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
-  const [activePass, setActivePass] = useState<number | null>(null)
   const [trails, setTrails] = useState<Array<{ id: number; palaceIndex: number }>>([])
   const [completed, setCompleted] = useState(0)
   const [playing, setPlaying] = useState(true)
@@ -158,7 +157,6 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
     setPlaying(false)
     setTrails([])
     setActiveIndex(passes[2].index)
-    setActivePass(2)
     setCompleted(3)
     onCompleteRef.current?.(true)
   }
@@ -168,7 +166,6 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
     setPlaying(true)
     setTrails([])
     setActiveIndex(null)
-    setActivePass(null)
     setCompleted(0)
     onCompleteRef.current?.(false)
   }
@@ -177,7 +174,6 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
     setPlaying(false)
     setTrails([])
     setActiveIndex(passes[index].index)
-    setActivePass(index)
     setCompleted((current) => Math.max(current, index + 1))
   }
   const showPassRef = useRef(showPass)
@@ -194,14 +190,12 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
     setPlaying(true)
     setTrails([])
     setActiveIndex(null)
-    setActivePass(null)
     setCompleted(0)
 
     if (reducedMotion) {
       setPlaying(false)
       setTrails([])
       setActiveIndex(lastPassIndex)
-      setActivePass(2)
       setCompleted(3)
       onCompleteRef.current?.(true)
       return () => {
@@ -222,7 +216,6 @@ export function LeftHandAnimation({ steps, passes, palaceCount, onCompleteChange
     animationPlan.paths.forEach((path, index) => {
       path.forEach((palaceIndex) => {
         schedule(() => {
-          setActivePass(index)
           setActiveIndex((previousIndex) => {
             if (previousIndex !== null && previousIndex !== palaceIndex) {
               const id = ++trailId.current

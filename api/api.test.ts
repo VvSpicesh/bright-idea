@@ -64,7 +64,7 @@ describe('Vercel AI API', () => {
 
   it('returns 401 for a missing password without calling Gemini', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
-    const { password: _password, ...withoutPassword } = validBody
+    const withoutPassword = Object.fromEntries(Object.entries(validBody).filter(([key]) => key !== 'password'))
     const response = await interpret.fetch(request('/api/interpret', 'POST', withoutPassword))
 
     expect(response.status).toBe(401)
