@@ -155,5 +155,26 @@ h2 { margin: 0 0 8px; font-size: 1.35rem; }
   .nav-item:hover, .nav-item:focus-visible { background: #30463e; }
 }
 @media (prefers-reduced-motion: reduce) { .active-marker-position { transition: none; } .active-marker, .active-marker-trail { animation: none; } }
+@media (min-width: 720px) {
+  .main-content.has-result { display: flex; width: min(100%, 1400px); height: 100dvh; min-height: 0; flex-direction: column; padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) calc(76px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); overflow: hidden; }
+  .has-result .brand-block { flex: 0 0 auto; margin-bottom: clamp(4px, 1dvh, 8px); }
+  .has-result .result-panel { min-height: 0; flex: 1; padding: clamp(8px, 1.4dvh, 12px); overflow: hidden; }
+  .result-layout { display: grid; height: 100%; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(10px, 1.5vw, 20px); }
+  .result-left, .revealed-result { min-width: 0; min-height: 0; }
+  .result-left { display: flex; flex-direction: column; }
+  .result-left .eyebrow { margin-bottom: clamp(4px, 1dvh, 12px); }
+  .result-left .result-meta { margin-block: clamp(6px, 1.2dvh, 12px); }
+  .result-left .source-line { margin-block: clamp(4px, 1dvh, 12px); }
+  .result-left .data-note { margin-block: clamp(3px, .7dvh, 8px); }
+  .result-left .hand-animation { min-height: 0; flex: 1; margin-top: clamp(4px, 1dvh, 10px); padding-top: clamp(4px, .8dvh, 8px); }
+  .result-left .hand-stage { width: clamp(150px, 26dvh, 230px); }
+  .result-left .pass-results { gap: clamp(4px, .8dvh, 8px); }
+  .result-left .pass-result { padding: clamp(5px, 1dvh, 9px); }
+  .revealed-result { margin-top: 0; padding-right: 4px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+  .revealed-result .passes { margin-top: 0; }
+  .revealed-result .ai-export-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+  .revealed-result .ai-export-actions button { min-width: 0; padding-inline: 5px; }
+  .has-result .disclaimer { flex: 0 0 auto; margin-top: clamp(4px, .8dvh, 8px); }
+}
 @media (max-width: 560px) { .section-heading, .result-header, .animation-heading { align-items: center; } .result-header { flex-direction: row; } .animation-heading { flex-direction: row; } .result-header h2 { max-width: 13rem; font-size: 1.05rem; } .animation-actions { gap: 4px; } .text-button { min-height: 34px; padding: 4px 6px; font-size: .72rem; } .hand-stage { width: min(100%, 230px); } .ai-export-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; } .ai-export-actions button { min-width: 0; min-height: 32px; padding: 4px 5px; } }
 @media (max-width: 380px) { .main-content { padding-right: 12px; padding-left: 12px; } .nav-item { min-width: 82px; } .form-panel, .result-panel, .status-panel { padding-right: 10px; padding-left: 10px; } .pass-card { padding: 6px; } .pass-card h3 { font-size: .9rem; } .pass-card p { font-size: .6rem; } .hand-stage { width: 220px; } }

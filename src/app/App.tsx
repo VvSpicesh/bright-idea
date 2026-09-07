@@ -87,7 +87,7 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <main className="main-content">
+      <main className={result && activeSection === '起课' ? 'main-content has-result' : 'main-content'}>
         <header className="brand-block">
           <p className="app-title">小六壬掌诀</p>
         </header>
@@ -169,20 +169,24 @@ function ResultView({ result, question, characterEntries, onBack }: { result: Di
   const [animationComplete, setAnimationComplete] = useState(false)
   const handleAnimationCompleteChange = useCallback((complete: boolean) => setAnimationComplete(complete), [])
   return <section className="result-panel" aria-labelledby="result-title">
-    <div className="result-header"><div><p className="eyebrow">起课结果</p><h2 id="result-title">{question || '未填写事项'}</h2><p className="result-summary">{result.ruleSystemId === 'classic-six' ? '六宫' : '九宫'} · {characterEntries ? '三字起课' : '三数起课'} · {result.inputs.join('、')}</p></div><button className="secondary-button" type="button" onClick={onBack}>重新起课</button></div>
-    <p className="result-meta">{result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）'} · 规则版本 {result.ruleVersion}</p>
-    {characterEntries ? <><p className="source-line">原始三字：{characterEntries.map((entry) => entry.original).join('')}<br />转换后的繁体三字：{characterEntries.map((entry) => entry.traditional).join('')}</p><div className="character-result">{characterEntries.map((entry) => <span key={entry.original}>{entry.original} → {entry.traditional}：数据 {entry.dataStrokeCount ?? '未找到'}，最终 {entry.finalStrokeCount}</span>)}</div><p className="data-note">笔画来源：{STROKE_DATA_SOURCE} · {STROKE_DATA_VERSION}</p></> : <p className="source-line">原始数字：{result.inputs.join('、')}</p>}
-    <LeftHandAnimation steps={result.steps} passes={passes} palaceCount={result.ruleSystemId === 'classic-six' ? 6 : 9} onCompleteChange={handleAnimationCompleteChange} />
-    {animationComplete && <div className="revealed-result">
-      <div className="passes">{passes.map((palace, index) => <article className="pass-card" key={labels[index]}><p className="pass-label">{labels[index]}</p><h3>{palace.name}</h3><p>{palace.element} · {palace.direction || '方位未设定'}</p><p className="keywords">{palace.keywords.join('、')}</p></article>)}</div>
-      <DivinationInterpretation passes={passes} />
-      <LocalGeminiInterpretation context={{
-        question,
-        systemName: result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）',
-        inputMethod: characterEntries ? '三字起课' : '三数起课',
-        originalInput: characterEntries ? characterEntries.map((entry) => entry.original).join('') : result.inputs.join('、'),
-        passes,
-      }} />
-    </div>}
+    <div className="result-layout">
+      <div className="result-left">
+        <div className="result-header"><div><p className="eyebrow">起课结果</p><h2 id="result-title">{question || '未填写事项'}</h2><p className="result-summary">{result.ruleSystemId === 'classic-six' ? '六宫' : '九宫'} · {characterEntries ? '三字起课' : '三数起课'} · {result.inputs.join('、')}</p></div><button className="secondary-button" type="button" onClick={onBack}>重新起课</button></div>
+        <p className="result-meta">{result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）'} · 规则版本 {result.ruleVersion}</p>
+        {characterEntries ? <><p className="source-line">原始三字：{characterEntries.map((entry) => entry.original).join('')}<br />转换后的繁体三字：{characterEntries.map((entry) => entry.traditional).join('')}</p><div className="character-result">{characterEntries.map((entry) => <span key={entry.original}>{entry.original} → {entry.traditional}：数据 {entry.dataStrokeCount ?? '未找到'}，最终 {entry.finalStrokeCount}</span>)}</div><p className="data-note">笔画来源：{STROKE_DATA_SOURCE} · {STROKE_DATA_VERSION}</p></> : <p className="source-line">原始数字：{result.inputs.join('、')}</p>}
+        <LeftHandAnimation steps={result.steps} passes={passes} palaceCount={result.ruleSystemId === 'classic-six' ? 6 : 9} onCompleteChange={handleAnimationCompleteChange} />
+      </div>
+      {animationComplete && <div className="revealed-result">
+        <div className="passes">{passes.map((palace, index) => <article className="pass-card" key={labels[index]}><p className="pass-label">{labels[index]}</p><h3>{palace.name}</h3><p>{palace.element} · {palace.direction || '方位未设定'}</p><p className="keywords">{palace.keywords.join('、')}</p></article>)}</div>
+        <DivinationInterpretation passes={passes} />
+        <LocalGeminiInterpretation context={{
+          question,
+          systemName: result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）',
+          inputMethod: characterEntries ? '三字起课' : '三数起课',
+          originalInput: characterEntries ? characterEntries.map((entry) => entry.original).join('') : result.inputs.join('、'),
+          passes,
+        }} />
+      </div>}
+    </div>
   </section>
 }
