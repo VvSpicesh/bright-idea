@@ -1,15 +1,16 @@
 import type { Palace } from '../rules'
-import { createDivinationInterpretation } from '../features/divination/interpretation'
+import { createDivinationInterpretation, interpretationDirections, type InterpretationDirection } from '../features/divination/interpretation'
 
-export function DivinationInterpretation({ passes }: { passes: readonly [Palace, Palace, Palace] }) {
-  const interpretation = createDivinationInterpretation(passes)
+export function DivinationInterpretation({ passes, direction, onDirectionChange }: { passes: readonly [Palace, Palace, Palace]; direction: InterpretationDirection; onDirectionChange: (direction: InterpretationDirection) => void }) {
+  const interpretation = createDivinationInterpretation(passes, direction)
 
   return <section className="interpretation" aria-labelledby="interpretation-title">
-    <h3 id="interpretation-title">综合结论</h3>
-    {interpretation.summary.map((sentence) => <p key={sentence}>{sentence}</p>)}
+    <label className="interpretation-direction">解读方向 <select value={direction} onChange={(event) => onDirectionChange(event.target.value as InterpretationDirection)}>{interpretationDirections.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+    <h3 id="interpretation-title">一句话结论</h3>
+    <p>{interpretation.summary}</p>
     <div className="interpretation-details">
-      <div className="interpretation-section"><h4>三传解读</h4>{interpretation.passReadings.map((reading) => <p key={reading}>{reading}</p>)}</div>
-      <div className="interpretation-section"><h4>五行关系</h4>{interpretation.transitions.map((transition, index) => <p key={`${index}-${transition.from}-${transition.to}`}>{transition.description}</p>)}</div>
+      <div className="interpretation-section"><h4>发展过程</h4>{interpretation.passReadings.map((reading) => <p key={reading}>{reading}</p>)}</div>
+      <div className="interpretation-section"><h4>关键转折</h4>{interpretation.turningPoints.map((transition) => <p key={transition}>{transition}</p>)}</div>
       <div className="interpretation-section"><h4>行动建议</h4><p>{interpretation.advice}</p></div>
       <div className="interpretation-section"><h4>判断依据</h4><ul>{interpretation.evidence.map((item) => <li key={item}>{item}</li>)}</ul></div>
     </div>

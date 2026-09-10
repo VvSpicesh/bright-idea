@@ -9,6 +9,7 @@ import { convertTimeDivination, formatDateTimeLocal, generateRandomInputs } from
 import type { DivinationMethod, TimeDivinationValues } from '../features/divination/methods'
 import { LeftHandAnimation, PassResults } from '../components/LeftHandAnimation'
 import { DivinationInterpretation } from '../components/DivinationInterpretation'
+import { detectInterpretationDirection, type InterpretationDirection } from '../features/divination/interpretation'
 import { LocalGeminiInterpretation } from '../components/LocalGeminiInterpretation'
 
 type Section = '起课' | '记录' | '规则'
@@ -240,6 +241,7 @@ function CharacterConfirmation({ characterInput, setCharacterInput, characterEnt
 }
 
 function ResultView({ result, question, source, onBack, onRandomize }: { result: DivinationResult; question: string; source: ResultSource; onBack: () => void; onRandomize: () => void }) {
+  const [direction, setDirection] = useState<InterpretationDirection>(() => detectInterpretationDirection(question))
   const passes = [result.first, result.second, result.third] as const
   const resultIdentityRef = useRef(result)
   const resultRunIdRef = useRef(0)
@@ -277,10 +279,11 @@ function ResultView({ result, question, source, onBack, onRandomize }: { result:
       <div className="revealed-result">
         <div className={animationComplete ? 'result-right-top' : 'result-right-top is-animation-pending'} aria-hidden={!animationComplete}>
           <div className="passes">{passes.map((palace, index) => <article className="pass-card" key={labels[index]}><p className="pass-label">{labels[index]}</p><h3>{palace.name}</h3><p>{palace.element} · {palace.direction || '方位未设定'}</p><p className="keywords">{palace.keywords.join('、')}</p></article>)}</div>
-          <DivinationInterpretation passes={passes} />
+          <DivinationInterpretation passes={passes} direction={direction} onDirectionChange={setDirection} />
         </div>
         <LocalGeminiInterpretation pending={!animationComplete} context={{
           question,
+          interpretationDirection: direction,
           systemName: result.ruleSystemId === 'classic-six' ? '六宫小六壬' : '九宫小六壬（荀爽体系）',
           inputMethod,
           originalInput,

@@ -97,6 +97,8 @@ h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-hei
 .revealed-result { margin-top: 12px; }
 .is-animation-pending { visibility: hidden; pointer-events: none; }
 .interpretation { margin-top: 12px; padding: 12px; border: 1px solid #d9cbb5; border-radius: 6px; background: rgba(255, 255, 255, .35); }
+.interpretation-direction { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; font-size: .8rem; }
+.interpretation-direction select { min-width: 0; max-width: 100%; min-height: 32px; padding: 3px 6px; border: 1px solid #a9977b; border-radius: 5px; color: inherit; background: inherit; font: inherit; }
 .interpretation h3, .interpretation h4 { margin: 0 0 7px; font-family: 'Noto Serif SC', 'SimSun', serif; }
 .interpretation h4 { color: #1f6f5b; font-size: .92rem; }
 .interpretation p, .interpretation li { color: #536b64; font-size: .84rem; line-height: 1.65; }
