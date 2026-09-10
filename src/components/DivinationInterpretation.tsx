@@ -1,8 +1,8 @@
 import type { Palace } from '../rules'
 import { createDivinationInterpretation, interpretationDirections, type InterpretationDirection } from '../features/divination/interpretation'
 
-export function DivinationInterpretation({ passes, direction, onDirectionChange }: { passes: readonly [Palace, Palace, Palace]; direction: InterpretationDirection; onDirectionChange: (direction: InterpretationDirection) => void }) {
-  const interpretation = createDivinationInterpretation(passes, direction)
+export function DivinationInterpretation({ passes, direction, question, onDirectionChange }: { passes: readonly [Palace, Palace, Palace]; direction: InterpretationDirection; question: string; onDirectionChange: (direction: InterpretationDirection) => void }) {
+  const interpretation = createDivinationInterpretation(passes, direction, question)
 
   return <section className="interpretation" aria-labelledby="interpretation-title">
     <label className="interpretation-direction">解读方向 <select value={direction} onChange={(event) => onDirectionChange(event.target.value as InterpretationDirection)}>{interpretationDirections.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
