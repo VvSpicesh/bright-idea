@@ -14,7 +14,7 @@
 - 数字、三字、随机和时间起课逻辑位于 `src/features/divination`；繁简转换与笔画查询离线完成。
 - 内置解说入口是 `src/features/divination/interpretation.ts`，问题分类与叙事生成已拆分为纯函数。
 - 页面当前只导出 AI 提示词。`worker-ai/`、`api/`、`src/features/ai/localGemini.ts` 是保留的历史方案，当前未使用；不要把 API Key 或密码写成启动必需步骤。
-- “记录”和“规则”导航目前是占位页，不得把历史、复盘或完整规则页面描述为已实现。
+- “记录”使用版本化 `localStorage` 快照，“规则”直接读取当前规则与解说配置；修改相关功能时先读 `docs/records-and-rules.md`。
 - UI 使用“小六壬”“六宫小六壬”“九宫小六壬（荀爽体系）”，不要称为“六爻”。
 - 传统象义使用可能性表达，不能替代医疗、法律或投资等现实领域的事实核验和专业意见。
 

@@ -14,14 +14,14 @@ export interface ElementTransition {
   readonly relation: ElementRelation
   readonly description: string
 }
-const generates: Record<Element, Element> = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' }
-const controls: Record<Element, Element> = { 木: '土', 土: '水', 水: '火', 火: '金', 金: '木' }
+export const elementGenerates: Readonly<Record<Element, Element>> = Object.freeze({ 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' })
+export const elementControls: Readonly<Record<Element, Element>> = Object.freeze({ 木: '土', 土: '水', 水: '火', 火: '金', 金: '木' })
 
 export function describeElementRelation(from: Element, to: Element): ElementTransition {
   if (from === to) return { from, to, relation: '同类', description: `同属${from}：趋势可能延续或加强，并不一定代表变好` }
-  if (generates[from] === to) return { from, to, relation: '相生', description: `${from}生${to}：前一阶段可能推动后一阶段，也可能让原有问题继续发展` }
-  if (controls[from] === to) return { from, to, relation: '相克', description: `${from}克${to}：前期因素可能压制后续发展，使下一步不易展开` }
-  if (generates[to] === from) return { from, to, relation: '受生', description: `${to}生${from}：后续条件可能对前面形成补充，让原有状态得到支撑` }
+  if (elementGenerates[from] === to) return { from, to, relation: '相生', description: `${from}生${to}：前一阶段可能推动后一阶段，也可能让原有问题继续发展` }
+  if (elementControls[from] === to) return { from, to, relation: '相克', description: `${from}克${to}：前期因素可能压制后续发展，使下一步不易展开` }
+  if (elementGenerates[to] === from) return { from, to, relation: '受生', description: `${to}生${from}：后续条件可能对前面形成补充，让原有状态得到支撑` }
   return { from, to, relation: '受克', description: `${to}克${from}：后续变化可能反制原有状态，原来的安排可能需要调整` }
 }
 

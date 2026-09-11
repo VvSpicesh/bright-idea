@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { calculateThreePasses, classicSixRules, xunNineRules } from '../rules'
+import { calculateThreePasses, classicSixRules, ruleSystems, xunNineRules } from '../rules'
 import type { DivinationResult, RuleSystem } from '../rules'
 import { isParsedNumber, parsePositiveInteger } from '../features/divination/numberInput'
 import { createCharacterEntries, lookupStrokeCount, STROKE_DATA_SOURCE, STROKE_DATA_VERSION, validateCharacters } from '../features/divination/characterInput'
@@ -11,6 +11,12 @@ import { LeftHandAnimation, PassResults } from '../components/LeftHandAnimation'
 import { DivinationInterpretation } from '../components/DivinationInterpretation'
 import { detectInterpretationDirection, type InterpretationDirection } from '../features/divination/interpretation'
 import { LocalGeminiInterpretation } from '../components/LocalGeminiInterpretation'
+import { RecordsPage } from '../components/RecordsPage'
+import { RulesPage } from '../components/RulesPage'
+import { createRecordSnapshot } from '../features/history/snapshot'
+import { deleteRecord, updateRecord } from '../features/history/records'
+import { loadRecords, saveRecords, saveRecordOnce } from '../features/history/storage'
+import type { DivinationRecord } from '../features/history/types'
 
 type Section = '起课' | '记录' | '规则'
 type InputMode = DivinationMethod
@@ -22,6 +28,10 @@ type ResultSource =
   | { method: 'time'; values: TimeDivinationValues }
 
 const sections: Section[] = ['起课', '记录', '规则']
+
+function createUniqueId(prefix: string): string {
+  return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`
+}
 
 export function App() {
   const [activeSection, setActiveSection] = useState<Section>('起课')
@@ -41,6 +51,27 @@ export function App() {
   const [reuseRandomInputs, setReuseRandomInputs] = useState(false)
   const [timeInput, setTimeInput] = useState(() => formatDateTimeLocal(new Date()))
   const [timeError, setTimeError] = useState('')
+  const [runId, setRunId] = useState('')
+  const [runCreatedAt, setRunCreatedAt] = useState('')
+  const [recordState, setRecordState] = useState<{ records: DivinationRecord[]; error?: string; message?: string }>(loadRecords)
+
+  const publishResult = (nextResult: DivinationResult, source: ResultSource) => {
+    setResult(nextResult)
+    setResultSource(source)
+    setRunId(createUniqueId('run'))
+    setRunCreatedAt(new Date().toISOString())
+  }
+
+  useEffect(() => {
+    if (!result || !resultSource || !runId || !runCreatedAt) return
+    try {
+      const record = createRecordSnapshot({ id: createUniqueId('record'), runId, createdAt: runCreatedAt, question, ruleSystem: ruleSystems[result.ruleSystemId], result, source: resultSource })
+      const saved = saveRecordOnce(record)
+      setRecordState({ records: saved.records, error: saved.warning, message: undefined })
+    } catch (error) {
+      setRecordState((current) => ({ ...current, error: error instanceof Error ? error.message : '记录保存失败。' }))
+    }
+  }, [question, result, resultSource, runCreatedAt, runId])
 
   const updateInput = (index: number, value: string) => {
     setInputs((current) => current.map((item, itemIndex) => itemIndex === index ? value : item))
@@ -51,24 +82,21 @@ export function App() {
   const startDivination = () => {
     if (inputMode === 'character') {
       if (!characterEntries || characterEntries.some((entry) => !entry.finalStrokeCount)) return
-      setResult(calculateThreePasses(ruleSystem, characterEntries.map((entry) => BigInt(entry.finalStrokeCount!)) as [bigint, bigint, bigint]))
-      setResultSource({ method: 'character', entries: characterEntries })
+      publishResult(calculateThreePasses(ruleSystem, characterEntries.map((entry) => BigInt(entry.finalStrokeCount!)) as [bigint, bigint, bigint]), { method: 'character', entries: characterEntries })
       return
     }
     if (inputMode === 'random') {
       const nextInputs = reuseRandomInputs && randomInputs ? randomInputs : generateRandomInputs()
       setRandomInputs(nextInputs)
       setReuseRandomInputs(false)
-      setResult(calculateThreePasses(ruleSystem, nextInputs.map(BigInt) as [bigint, bigint, bigint]))
-      setResultSource({ method: 'random' })
+      publishResult(calculateThreePasses(ruleSystem, nextInputs.map(BigInt) as [bigint, bigint, bigint]), { method: 'random' })
       return
     }
     if (inputMode === 'time') {
       try {
         const values = convertTimeDivination(timeInput)
         setTimeError('')
-        setResult(calculateThreePasses(ruleSystem, values.inputs.map(BigInt) as [bigint, bigint, bigint]))
-        setResultSource({ method: 'time', values })
+        publishResult(calculateThreePasses(ruleSystem, values.inputs.map(BigInt) as [bigint, bigint, bigint]), { method: 'time', values })
       } catch (error) {
         setTimeError(error instanceof Error ? error.message : '请输入有效的日期时间')
       }
@@ -83,8 +111,7 @@ export function App() {
     setErrors(nextErrors)
     if (!parsed.every(isParsedNumber)) return
     setRetainedInputs([true, true, true])
-    setResult(calculateThreePasses(ruleSystem, parsed as [bigint, bigint, bigint]))
-    setResultSource({ method: 'number' })
+    publishResult(calculateThreePasses(ruleSystem, parsed as [bigint, bigint, bigint]), { method: 'number' })
   }
 
   const resetToForm = () => {
@@ -95,8 +122,7 @@ export function App() {
   const changeRandomSet = () => {
     const nextInputs = generateRandomInputs()
     setRandomInputs(nextInputs)
-    setResult(calculateThreePasses(ruleSystem, nextInputs.map(BigInt) as [bigint, bigint, bigint]))
-    setResultSource({ method: 'random' })
+    publishResult(calculateThreePasses(ruleSystem, nextInputs.map(BigInt) as [bigint, bigint, bigint]), { method: 'random' })
   }
 
   const beginCharacterConfirmation = async () => {
@@ -128,8 +154,31 @@ export function App() {
   }
 
   const renderNavigationPage = () => {
-    if (activeSection === '记录') return <section className="status-panel"><h2>记录</h2><p>记录功能后续开放。</p></section>
-    if (activeSection === '规则') return <section className="status-panel"><h2>规则</h2><p>规则说明后续开放。</p></section>
+    const replaceRecords = (nextRecords: readonly DivinationRecord[], message: string) => {
+      try {
+        saveRecords(nextRecords)
+        setRecordState({ records: [...nextRecords], error: undefined, message })
+        return true
+      } catch (error) {
+        setRecordState((current) => ({ ...current, error: error instanceof Error ? error.message : '记录保存失败。' }))
+        return false
+      }
+    }
+    const rerunRecord = (record: DivinationRecord) => {
+      const system = ruleSystems[record.ruleSystemId]
+      const nextResult = calculateThreePasses(system, record.inputs.map(BigInt) as [bigint, bigint, bigint])
+      let source: ResultSource = { method: record.method === 'random' ? 'random' : 'number' }
+      if (record.method === 'character' && record.characters) source = { method: 'character', entries: record.characters.map((entry) => ({ ...entry })) }
+      if (record.method === 'time' && record.time) source = { method: 'time', values: { ...record.time, date: new Date(record.time.solarText.replace(' ', 'T')), inputs: record.inputs.map(Number) as [number, number, number] } }
+      setRuleSystem(system)
+      setQuestion(record.question)
+      setInputMode(record.method)
+      setInputs([...record.inputs])
+      publishResult(nextResult, source)
+      setActiveSection('起课')
+    }
+    if (activeSection === '记录') return <RecordsPage records={recordState.records} notice={recordState.error || recordState.message} onReplace={replaceRecords} onUpdate={(id, patch) => replaceRecords(updateRecord(recordState.records, id, patch), '复盘已保存。')} onDelete={(id) => replaceRecords(deleteRecord(recordState.records, id), '记录已删除。')} onClear={() => replaceRecords([], '全部记录已清空。')} onRerun={rerunRecord} />
+    if (activeSection === '规则') return <RulesPage />
     return result ? <ResultView result={result} question={question} source={resultSource!} onBack={resetToForm} onRandomize={changeRandomSet} /> : <DivinationForm
       ruleSystem={ruleSystem} setRuleSystem={setRuleSystem} question={question} setQuestion={setQuestion}
       inputs={inputs} errors={errors} retainedInputs={retainedInputs} updateInput={updateInput} onSubmit={startDivination} selectedInput={selectedInput} setSelectedInput={setSelectedInput}
@@ -142,11 +191,13 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <main className={result && activeSection === '起课' ? 'main-content has-result' : 'main-content'}>
+      <main className={result && activeSection === '起课' ? 'main-content has-result' : activeSection !== '起课' ? 'main-content has-library' : 'main-content'}>
         <header className="brand-block">
           <p className="app-title">小六壬掌诀</p>
           <p className="disclaimer">传统文化研究与娱乐用途，不构成现实领域的专业建议。</p>
         </header>
+
+        {recordState.error && activeSection !== '记录' && <p className="global-record-notice" role="alert">{recordState.error}</p>}
 
         {renderNavigationPage()}
       </main>

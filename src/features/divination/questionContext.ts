@@ -4,7 +4,7 @@ export type Topic = '综合' | '感情' | '工作' | '财运' | '健康' | '出�
 export type Intent = 'outcome' | 'timing' | 'advice' | 'trend'
 export interface QuestionContext { question: string; topic: Topic; intent: Intent }
 
-const directionRules: readonly [InterpretationDirection, RegExp][] = [
+export const topicRecognitionRules: readonly [InterpretationDirection, RegExp][] = [
   ['寻物', /寻物|找回|丢失|丢了|遗失|失物|不见|找不到/],
   ['健康', /健康|身体|生病|病情|症状|医院|检查|治疗|手术|疼|痛|康复/],
   ['感情', /感情|恋爱|结婚|婚姻|复合|分手|对象|伴侣|喜欢|表白|相亲|关系/],
@@ -15,18 +15,21 @@ const directionRules: readonly [InterpretationDirection, RegExp][] = [
 ]
 
 export function detectInterpretationDirection(question: string): InterpretationDirection {
-  return directionRules.find(([, pattern]) => pattern.test(question))?.[0] ?? '综合'
+  return topicRecognitionRules.find(([, pattern]) => pattern.test(question))?.[0] ?? '综合'
 }
+
+export const intentRecognitionRules: readonly [Exclude<Intent, 'trend'>, RegExp][] = [
+  ['timing', /什么时候|何时|多久/],
+  ['advice', /怎么|如何|怎么办/],
+  ['outcome', /是否|能否|会不会|可以吗|成功吗/],
+]
 
 // 显式选择优先；未选择时按问题识别。多意图时优先回答时间、方法，再回答是否。
 export function parseQuestion(question = '', direction?: InterpretationDirection): QuestionContext {
   const normalized = question.trim()
   const selected = direction ?? detectInterpretationDirection(normalized)
   const topic = selected === '工作/事业' ? '工作' : selected
-  const intent: Intent = /什么时候|何时|多久/.test(normalized) ? 'timing'
-    : /怎么|如何|怎么办/.test(normalized) ? 'advice'
-      : /是否|能否|会不会|可以吗|成功吗/.test(normalized) ? 'outcome'
-        : 'trend'
+  const intent: Intent = intentRecognitionRules.find(([, pattern]) => pattern.test(normalized))?.[0] ?? 'trend'
   return { question: normalized, topic, intent }
 }
 

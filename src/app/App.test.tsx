@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { App } from './App'
+import { RECORD_STORAGE_KEY } from '../features/history/types'
 
 function enterNumbers(values: string[]) {
   values.forEach((value, index) => {
@@ -11,6 +12,7 @@ function enterNumbers(values: string[]) {
 }
 
 describe('三数起课应用流程', () => {
+  beforeEach(() => localStorage.clear())
   it('uses the in-app keypad for multi-digit values and editing', () => {
     render(<App />)
     fireEvent.click(screen.getByLabelText('第1数'))
@@ -128,14 +130,44 @@ describe('三数起课应用流程', () => {
     expect(screen.queryByText('仅允许汉字和空格，标点及其他内容不能使用')).not.toBeInTheDocument()
   })
 
-  it('allows navigation to unfinished sections', () => {
+  it('opens the completed records and rules sections', () => {
     render(<App />)
     expect(screen.getByText('传统文化研究与娱乐用途，不构成现实领域的专业建议。').closest('header')).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: '主要导航' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '记录' }))
-    expect(screen.getByText('记录功能后续开放。')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '记录' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '还没有起课记录' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '规则' }))
-    expect(screen.getByText('规则说明后续开放。')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '规则' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '宫位顺序与解说配置' })).toBeInTheDocument()
+  })
+
+  it('shows corrupt local storage as a recoverable records error instead of blanking the app', () => {
+    localStorage.setItem(RECORD_STORAGE_KEY, '{broken')
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '记录' }))
+    expect(screen.getByRole('heading', { name: '记录' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('本地记录数据已损坏')
+    expect(localStorage.getItem(RECORD_STORAGE_KEY)).toBe('{broken')
+  })
+
+  it('automatically saves one record per run across rerenders and animation replay', async () => {
+    const view = render(<App />)
+    fireEvent.change(screen.getByLabelText('所问事项 （可选）'), { target: { value: '工作是否顺利' } })
+    enterNumbers(['1', '1', '1'])
+    fireEvent.click(screen.getByRole('button', { name: '开始起课' }))
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(RECORD_STORAGE_KEY) || '{}').records).toHaveLength(1))
+    view.rerender(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '跳过动画' }))
+    fireEvent.click(screen.getByRole('button', { name: '重新播放' }))
+    expect(JSON.parse(localStorage.getItem(RECORD_STORAGE_KEY) || '{}').records).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: '记录' }))
+    expect(screen.getByText('工作是否顺利')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('工作是否顺利'))
+    expect(screen.getByText('0.1.0')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '当时的解读' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '按当前规则重新起课' }))
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(RECORD_STORAGE_KEY) || '{}').records).toHaveLength(2))
   })
 
   it('confirms three characters, uses manual strokes, and keeps confirmation on return', async () => {

@@ -8,8 +8,8 @@
 
 | 文件 | 职责 | 对外导出 |
 |---|---|---|
-| `src/features/divination/interpretation.ts` | 汇总解说、计算相邻两传五行关系 | `ElementRelation`、`ElementTransition`、`describeElementRelation()`、`createDivinationInterpretation()`；转出 `detectInterpretationDirection()`、`interpretationDirections`、`parseQuestion()`、`InterpretationDirection`、`generateStageInterpretations()`、`synthesizeOverallTrend()` |
-| `src/features/divination/questionContext.ts` | topic、intent、解读方向与 topic 语境 | `interpretationDirections`、`InterpretationDirection`、`Topic`、`Intent`、`QuestionContext`、`detectInterpretationDirection()`、`parseQuestion()`、`TopicLanguage`、`topicLanguage()` |
+| `src/features/divination/interpretation.ts` | 汇总解说、计算相邻两传五行关系 | `ElementRelation`、`ElementTransition`、`elementGenerates`、`elementControls`、`describeElementRelation()`、`createDivinationInterpretation()`；转出 `detectInterpretationDirection()`、`interpretationDirections`、`parseQuestion()`、`InterpretationDirection`、`generateStageInterpretations()`、`synthesizeOverallTrend()` |
+| `src/features/divination/questionContext.ts` | topic、intent、解读方向与 topic 语境 | `interpretationDirections`、`InterpretationDirection`、`Topic`、`Intent`、`QuestionContext`、`topicRecognitionRules`、`intentRecognitionRules`、`detectInterpretationDirection()`、`parseQuestion()`、`TopicLanguage`、`topicLanguage()` |
 | `src/features/divination/interpretationNarrative.ts` | 整体走势、结论、三阶段和关键转折 | `Passes`、`Transitions`、`describeOverallTrajectory()`、`synthesizeOverallTrend()`、`generateStageInterpretations()`、`generateTurningPoints()` |
 | `src/features/divination/palaceSemantics.ts` | 九宫按初传/中传/末传配置宫义与建议 | `PalaceSemantics`、`palaceSemantics` |
 | `src/components/DivinationInterpretation.tsx` | 渲染方向选择、结论、发展过程、关键转折、建议、依据 | `DivinationInterpretation` |
@@ -126,7 +126,7 @@ export type InterpretationDirection = typeof interpretationDirections[number]
 
 ### topic 与实际关键词
 
-自动识别按 `directionRules` 从上到下查找，第一个匹配项生效：
+自动识别按 `topicRecognitionRules` 从上到下查找，第一个匹配项生效：
 
 | 优先级 | 解读方向 / topic | 实际正则关键词 |
 |---:|---|---|
@@ -139,23 +139,20 @@ export type InterpretationDirection = typeof interpretationDirections[number]
 | 7 | 出行 | `出行、旅行、旅游、出差、行程、航班、车票、远行` |
 | 默认 | 综合 | 无匹配 |
 
-`学业`没有出现在 `directionRules` 末尾以外的额外规则；`综合`也没有关键词。页面初始化自动识别后，用户可以改选方向。显式 `direction` 优先于自动识别；即使问题写“工作”，用户选“感情”后内部 topic 也会是“感情”。
+`学业`没有出现在 `topicRecognitionRules` 末尾以外的额外规则；`综合`也没有关键词。页面初始化自动识别后，用户可以改选方向。显式 `direction` 优先于自动识别；即使问题写“工作”，用户选“感情”后内部 topic 也会是“感情”。
 
 实际函数是：
 
 ```ts
 export function detectInterpretationDirection(question: string): InterpretationDirection {
-  return directionRules.find(([, pattern]) => pattern.test(question))?.[0] ?? '综合'
+  return topicRecognitionRules.find(([, pattern]) => pattern.test(question))?.[0] ?? '综合'
 }
 
 export function parseQuestion(question = '', direction?: InterpretationDirection): QuestionContext {
   const normalized = question.trim()
   const selected = direction ?? detectInterpretationDirection(normalized)
   const topic = selected === '工作/事业' ? '工作' : selected
-  const intent: Intent = /什么时候|何时|多久/.test(normalized) ? 'timing'
-    : /怎么|如何|怎么办/.test(normalized) ? 'advice'
-      : /是否|能否|会不会|可以吗|成功吗/.test(normalized) ? 'outcome'
-        : 'trend'
+  const intent: Intent = intentRecognitionRules.find(([, pattern]) => pattern.test(normalized))?.[0] ?? 'trend'
   return { question: normalized, topic, intent }
 }
 ```
@@ -194,12 +191,12 @@ export function parseQuestion(question = '', direction?: InterpretationDirection
 程序用两个映射定义相生、相克：
 
 ```ts
-const generates: Record<Element, Element> = {
+export const elementGenerates: Readonly<Record<Element, Element>> = Object.freeze({
   木: '火', 火: '土', 土: '金', 金: '水', 水: '木',
-}
-const controls: Record<Element, Element> = {
+})
+export const elementControls: Readonly<Record<Element, Element>> = Object.freeze({
   木: '土', 土: '水', 水: '火', 火: '金', 金: '木',
-}
+})
 ```
 
 方向判断的真实实现是：
@@ -207,9 +204,9 @@ const controls: Record<Element, Element> = {
 ```ts
 export function describeElementRelation(from: Element, to: Element): ElementTransition {
   if (from === to) return { from, to, relation: '同类', description: `同属${from}：趋势可能延续或加强，并不一定代表变好` }
-  if (generates[from] === to) return { from, to, relation: '相生', description: `${from}生${to}：前一阶段可能推动后一阶段，也可能让原有问题继续发展` }
-  if (controls[from] === to) return { from, to, relation: '相克', description: `${from}克${to}：前期因素可能压制后续发展，使下一步不易展开` }
-  if (generates[to] === from) return { from, to, relation: '受生', description: `${to}生${from}：后续条件可能对前面形成补充，让原有状态得到支撑` }
+  if (elementGenerates[from] === to) return { from, to, relation: '相生', description: `${from}生${to}：前一阶段可能推动后一阶段，也可能让原有问题继续发展` }
+  if (elementControls[from] === to) return { from, to, relation: '相克', description: `${from}克${to}：前期因素可能压制后续发展，使下一步不易展开` }
+  if (elementGenerates[to] === from) return { from, to, relation: '受生', description: `${to}生${from}：后续条件可能对前面形成补充，让原有状态得到支撑` }
   return { from, to, relation: '受克', description: `${to}克${from}：后续变化可能反制原有状态，原来的安排可能需要调整` }
 }
 ```
@@ -368,7 +365,7 @@ evidence[3]：以上为传统象义的解释，不代表现实因果；涉及健
 - `palaceSemantics`、私有 `outlook`、`languages`、求职特例、三套五行叙事映射和整体走势模板全部硬编码。
 - 解析只做不区分词边界的正则包含匹配，不理解否定、指代、人物关系、上下文、同义词或问题主次。“会怎样”不会识别为 outcome；“换工作”不会触发求职专用文案。
 - 用户手选方向会覆盖自动 topic，即使与问题文本冲突；intent 始终从原问题解析。
-- 一个问题命中多个 topic 时只取 `directionRules` 中最先出现的类别。
+- 一个问题命中多个 topic 时只取 `topicRecognitionRules` 中最先出现的类别。
 - 总结模板和阶段模板避免了完整句复制，但会重复末传倾向、五行方向和现实成立条件的语义。
 - 非固定组合大量合并到按 `support/difficulty/mixed` 选择的宽泛走势，不能表达所有宫位顺序的独特差别。
 - 宫位配置没有按 topic 改写。病符、桃花等通用宫义放入不相干 topic 时可能显得生硬；案例 B 即为真实例子。
@@ -382,13 +379,13 @@ evidence[3]：以上为传统象义的解释，不代表现实因果；涉及健
 | 某宫初/中/末含义和宫位建议 | `src/features/divination/palaceSemantics.ts` | `palaceSemantics` |
 | 某宫用于总结的状态、末传倾向、速度或支持/困难分类 | `src/features/divination/interpretationNarrative.ts` | 私有 `outlook` |
 | 某 topic 的基础、反馈、核实项、成立条件和行动文案 | `src/features/divination/questionContext.ts` | 私有 `languages`、`topicLanguage()` |
-| topic 分类、关键词与优先级 | `src/features/divination/questionContext.ts` | 私有 `directionRules`、`detectInterpretationDirection()` |
+| topic 分类、关键词与优先级 | `src/features/divination/questionContext.ts` | `topicRecognitionRules`、`detectInterpretationDirection()` |
 | intent 分类、关键词与优先级 | `src/features/divination/questionContext.ts` | `parseQuestion()` |
 | 整体走势组合与优先级 | `src/features/divination/interpretationNarrative.ts` | `describeOverallTrajectory()` |
 | 一句话结论骨架、intent 回答方式、五行摘要措辞 | `src/features/divination/interpretationNarrative.ts` | `synthesizeOverallTrend()`、私有 `summaryLinks` |
 | 三阶段结构、现实表现和阶段五行措辞 | `src/features/divination/interpretationNarrative.ts` | `generateStageInterpretations()`、私有 `manifestation()`、`stageLinks` |
 | 关键转折 | `src/features/divination/interpretationNarrative.ts` | `generateTurningPoints()`、私有 `turningLinks` |
-| 五行生克判定和判断依据文字 | `src/features/divination/interpretation.ts` | `generates`、`controls`、`describeElementRelation()`、`createDivinationInterpretation()` |
+| 五行生克判定和判断依据文字 | `src/features/divination/interpretation.ts` | `elementGenerates`、`elementControls`、`describeElementRelation()`、`createDivinationInterpretation()` |
 | AI 导出字段和约束 | `src/features/ai/aiPrompt.ts` | `AiPromptContext`、`buildAiInterpretationPrompt()` |
 
 调整任何宫义时应同时检查 `palaceSemantics` 与 `outlook`；调整五行文字时应同时检查 `describeElementRelation()`、`summaryLinks`、`stageLinks` 和 `turningLinks`，避免页面不同区块对同一关系给出冲突表述。
