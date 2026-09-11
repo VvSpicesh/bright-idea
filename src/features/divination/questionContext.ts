@@ -1,4 +1,4 @@
-import type { SixQuestionDomain } from './sixPalaceKnowledge'
+import type { SixQuestionDomain, SixSpecificTopic } from './sixPalaceKnowledge'
 
 export const interpretationDirections = ['综合', '感情', '工作/事业', '财运', '健康', '出行', '寻物', '学业', '纠纷', '人物'] as const
 export type InterpretationDirection = typeof interpretationDirections[number]
@@ -9,11 +9,11 @@ export interface QuestionContext { question: string; topic: Topic; intent: Inten
 export const topicRecognitionRules: readonly [InterpretationDirection, RegExp][] = [
   ['纠纷', /官司|投诉|争吵|矛盾|赔偿|纠纷|冲突/],
   ['人物', /某人怎么样|性格|是否可信|是否合作|这个人/],
-  ['寻物', /寻物|找回|丢失|丢了|遗失|失物|不见|找不到/],
+  ['寻物', /寻物|找回|丢失|丢了|遗失|失物|不见|找不到|放哪里|钥匙|手机|钱包|证件/],
   ['健康', /健康|身体|生病|病情|症状|医院|检查|治疗|手术|疼|痛|康复/],
   ['感情', /感情|恋爱|结婚|婚姻|复合|分手|对象|伴侣|喜欢|表白|相亲|关系/],
   ['学业', /学业|学习|考试|考研|考公|升学|成绩|论文|学校/],
-  ['财运', /财运|投资|股票|基金|理财|赚钱|收入|回款|收益|借钱|还款|债务/],
+  ['财运', /财运|投资|股票|基金|理财|赚钱|收入|回款|收益|借钱|还款|债务|买卖|交易|生意/],
   ['工作/事业', /工作|事业|求职|岗位|职位|面试|待遇|升职|跳槽|创业|项目|客户|同事|老板|公司/],
   ['出行', /出行|旅行|旅游|出差|行程|航班|车票|远行/],
 ]
@@ -24,14 +24,31 @@ export function detectInterpretationDirection(question: string): InterpretationD
 
 const sixDomainKeywords: Readonly<Record<Exclude<SixQuestionDomain, '通用'>, readonly string[]>> = {
   事业: ['工作', '求职', '面试', '升职', '项目', '客户', '公司', '职位'],
-  财运: ['钱', '收入', '投资', '回款', '生意', '价格', '买卖'],
-  感情: ['感情', '恋爱', '婚姻', '对象', '复合', '关系', '喜欢'],
+  财运: ['钱', '收入', '投资', '回款', '生意', '价格', '买卖', '交易', '赚钱'],
+  感情: ['感情', '恋爱', '婚姻', '对象', '复合', '关系', '喜欢', '相亲', '合作', '谈判'],
   学业: ['考试', '学习', '成绩', '学校', '升学'],
   健康: ['身体', '疾病', '手术', '住院', '恢复', '检查'],
-  出行: ['旅行', '搬家', '出差', '行程', '航班'],
-  纠纷: ['官司', '投诉', '争吵', '矛盾', '赔偿'],
-  寻物: ['丢失', '找到', '东西在哪'],
+  出行: ['旅行', '搬家', '出差', '行程', '航班', '回来', '到达', '联系', '消息', '回复', '什么时候来', '失联'],
+  纠纷: ['官司', '诉讼', '投诉', '争吵', '矛盾', '赔偿', '纠纷', '责任'],
+  寻物: ['失物', '丢失', '丢了', '找不到', '放哪里', '遗失', '钥匙', '手机', '钱包', '证件'],
   人物: ['某人怎么样', '性格', '是否可信', '是否合作'],
+}
+
+const specificTopicKeywords: Readonly<Record<SixSpecificTopic, readonly string[]>> = {
+  lostProperty: ['失物', '丢失', '丢了', '找不到', '放哪里', '遗失', '钥匙', '手机', '钱包', '证件'],
+  travelerMessage: ['回来', '到达', '联系', '消息', '回复', '什么时候来', '失联'],
+  wealth: ['钱', '收入', '回款', '收回来', '赚钱', '买卖', '交易', '生意', '投资'],
+  dispute: ['官司', '诉讼', '投诉', '赔偿', '争执', '纠纷', '责任'],
+  relationship: ['感情', '婚姻', '相亲', '复合', '合作', '谈判'],
+  health: ['疾病', '住院', '手术', '恢复', '检查', '治疗'],
+}
+
+const specificTopicDomains: Readonly<Record<SixSpecificTopic, SixQuestionDomain>> = {
+  lostProperty: '寻物', travelerMessage: '出行', wealth: '财运', dispute: '纠纷', relationship: '感情', health: '健康',
+}
+
+export const specificTopicLabels: Readonly<Record<SixSpecificTopic, string>> = {
+  lostProperty: '寻物', travelerMessage: '行人消息', wealth: '求财', dispute: '纠纷官事', relationship: '婚恋合作', health: '健康',
 }
 
 const directionDomains: Partial<Record<InterpretationDirection, SixQuestionDomain>> = {
@@ -40,6 +57,7 @@ const directionDomains: Partial<Record<InterpretationDirection, SixQuestionDomai
 
 export interface SixQuestionContext {
   readonly domain: SixQuestionDomain
+  readonly specificTopic?: SixSpecificTopic
   readonly auxiliaryDomains: readonly SixQuestionDomain[]
   readonly hasQuestion: boolean
 }
@@ -51,10 +69,18 @@ export function classifySixQuestion(question = '', direction?: InterpretationDir
   const matches = (Object.entries(sixDomainKeywords) as [Exclude<SixQuestionDomain, '通用'>, readonly string[]][])
     .map(([domain, keywords]) => ({ domain, score: keywords.filter((keyword) => normalized.includes(keyword)).length }))
     .filter(({ score }) => score > 0)
-  if (!matches.length) return { domain: manuallySelected ?? '通用', auxiliaryDomains: [], hasQuestion: Boolean(normalized) }
+  const specificMatches = (Object.entries(specificTopicKeywords) as [SixSpecificTopic, readonly string[]][])
+    .map(([specificTopic, keywords]) => ({ specificTopic, score: keywords.filter((keyword) => normalized.includes(keyword)).length }))
+    .filter(({ score }) => score > 0)
+  const specificCandidate = specificMatches.length
+    ? specificMatches.find(({ score }) => score === Math.max(...specificMatches.map((item) => item.score)))!.specificTopic
+    : undefined
+  if (!matches.length) return { domain: specificCandidate ? specificTopicDomains[specificCandidate] : manuallySelected ?? '通用', specificTopic: specificCandidate, auxiliaryDomains: [], hasQuestion: Boolean(normalized) }
   const topScore = Math.max(...matches.map(({ score }) => score))
-  const primary = matches.find(({ score }) => score === topScore)!.domain
-  return { domain: primary, auxiliaryDomains: matches.filter(({ domain }) => domain !== primary).map(({ domain }) => domain), hasQuestion: true }
+  const detectedPrimary = matches.find(({ score }) => score === topScore)!.domain
+  const specificTopic = specificCandidate && specificTopicDomains[specificCandidate] === detectedPrimary ? specificCandidate : undefined
+  const primary = detectedPrimary
+  return { domain: primary, specificTopic, auxiliaryDomains: matches.filter(({ domain }) => domain !== primary).map(({ domain }) => domain), hasQuestion: true }
 }
 
 export const intentRecognitionRules: readonly [Exclude<Intent, 'trend'>, RegExp][] = [

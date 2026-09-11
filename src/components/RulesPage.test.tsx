@@ -16,6 +16,10 @@ describe('规则页面', () => {
     expect(within(cards[0] as HTMLElement).getByText(sixPalaceKnowledge.大安.generalMeaning)).toBeInTheDocument()
     expect(within(cards[0] as HTMLElement).getByText('甲乙／寅卯／丁')).toBeInTheDocument()
     expect(within(cards[0] as HTMLElement).getByText('1、4、5（仅展示，不参与起课计算）')).toBeInTheDocument()
+    expect(within(cards[0] as HTMLElement).getByText(sixPalaceKnowledge.大安.verse)).toBeInTheDocument()
+    expect(within(cards[5] as HTMLElement).getByText(sixPalaceKnowledge.空亡.verseModernMeaning)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '六宫口诀与事项细断' })).toBeInTheDocument()
+    expect(screen.getByText(/口诀存在版本和流派差异/)).toBeInTheDocument()
     const bodyMeanings = ['左腿、肝胆、四肢', '左臂、心、肾、胃', '头脑、血液、心脑', '右臂、肺、肠胃', '右腿、肾、肝、肠', '膀胱、生殖系统、脾、脑']
     bodyMeanings.forEach((bodyMeaning, index) => expect(within(cards[index] as HTMLElement).getByText(bodyMeaning)).toBeInTheDocument())
     expect(screen.queryByText('传统人体对应资料未提供')).not.toBeInTheDocument()

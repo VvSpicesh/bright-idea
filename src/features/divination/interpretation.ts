@@ -42,6 +42,7 @@ export function createDivinationInterpretation(passes: Passes, direction?: Inter
     transitions,
     turningPoints: generateTurningPoints(passes, transitions),
     advice: advicePalaces.map((palace) => palaceSemantics[palace.name as keyof typeof palaceSemantics].advice).join('') + topicLanguage(context).action,
+    traditionalHints: [],
     evidence: [
       `宫位：初传${first.name}（${first.element}）、中传${second.name}（${second.element}）、末传${third.name}（${third.element}）。`,
       `宫义关键词：${uniquePalaces.map((palace) => `${palace.name}：${palace.keywords.join('、')}`).join('；')}。`,

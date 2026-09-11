@@ -389,3 +389,14 @@ evidence[3]：以上为传统象义的解释，不代表现实因果；涉及健
 | AI 导出字段和约束 | `src/features/ai/aiPrompt.ts` | `AiPromptContext`、`buildAiInterpretationPrompt()` |
 
 调整任何宫义时应同时检查 `palaceSemantics` 与 `outlook`；调整五行文字时应同时检查 `describeElementRelation()`、`summaryLinks`、`stageLinks` 和 `turningLinks`，避免页面不同区块对同一关系给出冲突表述。
+
+## 六宫口诀与具体事项解说
+
+六宫专用数据位于 `src/features/divination/sixPalaceKnowledge.ts`。每宫保存口诀原文、现代解释和 `specificTopicMeanings`；后者将口诀转成可核实的现代事项语义，而不是把原文拼接进结论。
+
+- `lostProperty`、`travelerMessage`、`wealth`、`dispute`、`relationship`、`health` 的关键词集中在 `questionContext.ts` 的 `specificTopicKeywords`。
+- `classifySixQuestion()` 返回具体事项后，`createSixPalaceInterpretation()` 分别用初传 `initial`、中传 `process`、末传 `outcome` 生成三段，并保留五行与阴阳关系；`action` 生成可执行建议。
+- `traditionalHint` 单独作为“传统提示”显示，不与现实行动建议混写。寻物提示的方位／时段仅供扩大排查范围，不能保证找回；空亡不输出“永远找不到”。
+- 健康具体事项只描述处理节奏与信息状态，始终附带医学免责声明；不把口诀中的痊愈、无妨、灾殃、恶鬼等写入现代解说。
+
+口诀、天干地支、象数、方位及时段属于展示或解说资料，不参与 `calculateThreePasses()`。基础属性仍以当前六宫配置为准：留连为土／螣蛇，小吉为水／玄武。留连水／玄武、小吉六合、速喜“申午未”及求财方位的其他流派版本仅在规则页的流派说明中提示，不能覆盖落宫计算或五行关系。

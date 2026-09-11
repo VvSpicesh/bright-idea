@@ -15,7 +15,7 @@ describe('问题驱动的三传解说', () => {
     const love = createDivinationInterpretation([stable, delay, fast], undefined, '这段感情会复合吗？', 'classic-six')
     const nine = createDivinationInterpretation([xunNineRules.palaces[0], xunNineRules.palaces[1], xunNineRules.palaces[2]], undefined, '这次求职能成功吗？', 'xun-nine')
     expect(work.passReadings[0]).toContain('工作基础较明确')
-    expect(love.passReadings[0]).toContain('关系倾向持续')
+    expect(love.passReadings[0]).toContain('关系基础尚在，进展偏缓')
     expect(work.passReadings).not.toEqual(love.passReadings)
     expect(nine.passReadings[0]).toContain('前期：')
   })
@@ -23,17 +23,51 @@ describe('问题驱动的三传解说', () => {
   it('uses the exact question to distinguish work, relationship, and money readings for 大安→留连→速喜', () => {
     const [stable, delay, fast] = classicSixRules.palaces
     const questions = [
-      ['这次求职能成功吗', '事业', '工作基础较明确'],
-      ['这段感情会怎么样', '感情', '关系倾向持续'],
-      ['这笔钱什么时候能收回来', '财运', '已有资源可以保留'],
+      ['这次求职能成功吗', '针对“事业”所问', '工作基础较明确'],
+      ['这段感情会怎么样', '就婚恋合作而言', '关系基础尚在，进展偏缓'],
+      ['这笔钱什么时候能收回来', '就求财而言', '已有来源较可依靠'],
     ] as const
     const readings = questions.map(([question]) => createDivinationInterpretation([stable, delay, fast], undefined, question, 'classic-six'))
-    questions.forEach(([, domain, topicMeaning], index) => {
-      expect(readings[index].summary).toContain(`针对“${domain}”所问`)
+    questions.forEach(([, summaryMarker, topicMeaning], index) => {
+      expect(readings[index].summary).toContain(summaryMarker)
       expect(readings[index].passReadings[0]).toContain(topicMeaning)
-      expect(readings[index].evidence).toContain(`识别到的问题领域：${domain}。`)
     })
+    expect(readings[0].evidence).toContain('识别到的问题领域：事业。')
+    expect(readings[1].evidence).toContain('识别到的问题领域：感情（婚恋合作）。')
+    expect(readings[2].evidence.join('')).toContain('识别到的问题领域：财运（求财）')
     expect(new Set(readings.map((reading) => reading.passReadings.join(''))).size).toBe(3)
+  })
+
+  it('recognizes the six detailed question types from centralized keywords', () => {
+    expect(classifySixQuestion('我的钥匙找不到了')).toMatchObject({ domain: '寻物', specificTopic: 'lostProperty' })
+    expect(classifySixQuestion('他什么时候回来')).toMatchObject({ domain: '出行', specificTopic: 'travelerMessage' })
+    expect(classifySixQuestion('这笔回款能收到吗')).toMatchObject({ domain: '财运', specificTopic: 'wealth' })
+    expect(classifySixQuestion('这个官司怎么发展')).toMatchObject({ domain: '纠纷', specificTopic: 'dispute' })
+    expect(classifySixQuestion('我们合作怎么谈')).toMatchObject({ domain: '感情', specificTopic: 'relationship' })
+    expect(classifySixQuestion('手术后恢复如何')).toMatchObject({ domain: '健康', specificTopic: 'health' })
+  })
+
+  it('uses six different modern lost-property readings with concrete actions and cautious traditional hints', () => {
+    const readings = classicSixRules.palaces.map((palace) => createDivinationInterpretation([palace, palace, palace], undefined, '我的钥匙找不到了', 'classic-six'))
+    expect(new Set(readings.map((reading) => reading.passReadings[0])).size).toBe(6)
+    expect(readings[0].passReadings.join('')).toContain('熟悉环境或家中')
+    expect(readings[1].passReadings.join('')).toContain('被移动、遮挡、夹住')
+    expect(readings[2].passReadings.join('')).toContain('较快得到线索')
+    expect(readings[3].advice).toContain('查看监控、失物招领')
+    expect(readings[4].advice).toContain('按接触顺序询问')
+    expect(readings[5].passReadings.join('')).toContain('不能直接显示为永远找不到')
+    expect(readings[2].traditionalHints.join('')).toContain('传统提示可参考')
+    expect(readings[2].traditionalHints.join('')).not.toContain('一定')
+  })
+
+  it('keeps detailed health readings non-diagnostic and leaves nine-palace output untouched', () => {
+    const health = createDivinationInterpretation(passes, undefined, '手术后恢复如何', 'classic-six')
+    const healthOutput = [health.summary, ...health.passReadings, health.advice, ...health.traditionalHints, ...health.evidence].join('')
+    expect(healthOutput).not.toMatch(/痊愈|无妨|恶鬼|鬼神|生死/)
+    expect(healthOutput).toContain('医生、检查结果')
+    const nine = createDivinationInterpretation([xunNineRules.palaces[0], xunNineRules.palaces[1], xunNineRules.palaces[2]], undefined, '我的钥匙找不到了', 'xun-nine')
+    expect(nine.traditionalHints).toEqual([])
+    expect(nine.passReadings[0]).toContain('前期：')
   })
 
   it('uses distinct stage roles, an independent conclusion, and actionable six-palace advice', () => {

@@ -12,6 +12,7 @@ export function DivinationInterpretation({ passes, direction, question, ruleSyst
       <div className="interpretation-section"><h4>发展过程</h4>{interpretation.passReadings.map((reading) => <p key={reading}>{reading}</p>)}</div>
       <div className="interpretation-section"><h4>关键转折</h4>{interpretation.turningPoints.map((transition) => <p key={transition}>{transition}</p>)}</div>
       <div className="interpretation-section"><h4>行动建议</h4>{interpretation.advice.split('\n').map((item) => <p key={item}>{item}</p>)}</div>
+      {interpretation.traditionalHints.length > 0 && <div className="interpretation-section"><h4>传统提示</h4>{interpretation.traditionalHints.map((hint) => <p key={hint}>{hint}</p>)}</div>}
       <div className="interpretation-section"><h4>判断依据</h4><ul>{interpretation.evidence.map((item) => <li key={item}>{item}</li>)}</ul></div>
     </div>
   </section>

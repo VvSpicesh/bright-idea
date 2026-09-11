@@ -1,7 +1,7 @@
-import type { ElementRelation, ElementTransition } from './interpretation'
+import type { ElementRelation } from './interpretation'
 import type { Passes, Transitions } from './interpretationNarrative'
 import { sixPalaceKnowledge, type SixPalaceKnowledge, type SixPalaceName, type SixQuestionDomain } from './sixPalaceKnowledge'
-import type { SixQuestionContext } from './questionContext'
+import { specificTopicLabels, type SixQuestionContext } from './questionContext'
 
 const stages = ['初传', '中传', '末传'] as const
 
@@ -63,6 +63,17 @@ function stageReading(passes: Passes, transitions: Transitions, context: SixQues
   const subject = context.domain === '通用' ? '事情的发展' : context.domain === '人物' ? '所问之人的表现' : `${context.domain}问题`
   const base = `“${palace.name}”主${current.generalMeaning}`
   const topic = domainMeaning(current, context.domain)
+  const specific = context.specificTopic ? current.specificTopicMeanings[context.specificTopic] : undefined
+  const specificLabel = context.specificTopic ? specificTopicLabels[context.specificTopic] : undefined
+  if (specific && index === 0) return `初传：${specificLabel}的当前状态显示${specific.initial}。${base}，说明起因或基础仍需从已知事实核实。`
+  if (specific && index === 1) {
+    const before = knowledgeFor(passes[0].name)
+    return `中传：处理过程更可能表现为${specific.process}。${base}；${relationMeaning(transitions[0].relation)}，阴阳由${before.polarity}转${current.polarity}，${polarityMeaning(before, current)}。`
+  }
+  if (specific) {
+    const before = knowledgeFor(passes[1].name)
+    return `末传：后续倾向为${specific.outcome}。${base}；${relationMeaning(transitions[1].relation)}，阴阳由${before.polarity}转${current.polarity}，${polarityMeaning(before, current)}。`
+  }
   if (index === 0) return `${stages[index]}：${subject}的起点以${base}为背景；${topic}。这说明当前状态为何形成：条件较好时${current.positiveExpression}，条件不利时则${current.negativeExpression}。`
   if (index === 1) {
     const before = knowledgeFor(passes[0].name)
@@ -84,12 +95,16 @@ function turningPoint(passes: Passes, transitions: Transitions, index: 0 | 1): s
 export function createSixPalaceInterpretation(passes: Passes, transitions: Transitions, context: SixQuestionContext) {
   const finalKnowledge = knowledgeFor(passes[2].name)
   const finalMeaning = domainMeaning(finalKnowledge, context.domain)
+  const finalSpecific = context.specificTopic ? finalKnowledge.specificTopicMeanings[context.specificTopic] : undefined
+  const specificLabel = context.specificTopic ? specificTopicLabels[context.specificTopic] : undefined
   const summary = context.hasQuestion
-    ? `针对“${context.domain}”所问，末传${passes[2].name}显示${finalMeaning}；结合前两传变化，更适合以${finalKnowledge.advice}来判断后续能否落实。`
+    ? finalSpecific
+      ? `就${specificLabel}而言，末传${passes[2].name}提示${finalSpecific.outcome}；应以${finalSpecific.action}来核实后续。`
+      : `针对“${context.domain}”所问，末传${passes[2].name}显示${finalMeaning}；结合前两传变化，更适合以${finalKnowledge.advice}来判断后续能否落实。`
     : `本次三传最终落在${passes[2].name}，整体以${finalKnowledge.generalMeaning}为主要倾向。未填写具体问题，补充对象后可获得更有针对性的说明。`
   const advice = [
-    `围绕末传：${finalKnowledge.advice}。`,
-    `针对${context.domain}：${concreteAction(context.domain, passes[2].name)}`,
+    context.specificTopic ? `处理中传：${knowledgeFor(passes[1].name).specificTopicMeanings[context.specificTopic].action}。` : `围绕末传：${finalKnowledge.advice}。`,
+    context.specificTopic ? `落实末传：${finalSpecific!.action}。` : `针对${context.domain}：${concreteAction(context.domain, passes[2].name)}`,
     context.auxiliaryDomains.length ? `辅助领域${context.auxiliaryDomains.join('、')}仅作背景核对，不替代主领域“${context.domain}”的判断。` : undefined,
   ].filter(Boolean).join('\n')
   const healthNote = context.domain === '健康'
@@ -100,10 +115,16 @@ export function createSixPalaceInterpretation(passes: Passes, transitions: Trans
     passReadings: [stageReading(passes, transitions, context, 0), stageReading(passes, transitions, context, 1), stageReading(passes, transitions, context, 2)],
     turningPoints: [turningPoint(passes, transitions, 0), turningPoint(passes, transitions, 1)],
     advice,
+    traditionalHints: context.specificTopic
+      ? passes.flatMap((palace, index) => {
+        const hint = knowledgeFor(palace.name).specificTopicMeanings[context.specificTopic!].traditionalHint
+        return hint ? [`${stages[index]}传统提示：${hint}`] : []
+      })
+      : [],
     evidence: [
       `三传宫位：${passes.map((palace) => palace.name).join(' → ')}。`,
       `五行关系：初→中 ${transitions[0].from}${transitions[0].relation}${transitions[0].to}；中→末 ${transitions[1].from}${transitions[1].relation}${transitions[1].to}。`,
-      `识别到的问题领域：${context.domain}${context.auxiliaryDomains.length ? `；辅助：${context.auxiliaryDomains.join('、')}` : ''}。`,
+      `识别到的问题领域：${context.domain}${context.specificTopic ? `（${specificLabel}）` : ''}${context.auxiliaryDomains.length ? `；辅助：${context.auxiliaryDomains.join('、')}` : ''}。`,
       healthNote,
     ],
   }
