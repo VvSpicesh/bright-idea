@@ -1,3 +1,5 @@
+import { APP_VERSION } from '../version'
+
 export type RuleSystemId = 'classic-six' | 'xun-nine'
 export type Element = '木' | '火' | '土' | '金' | '水'
 
@@ -13,7 +15,7 @@ export interface Palace {
 export interface RuleSystem {
   readonly id: RuleSystemId
   readonly name: string
-  readonly ruleVersion: '0.1.0'
+  readonly ruleVersion: typeof APP_VERSION
   readonly palaces: readonly Palace[]
 }
 

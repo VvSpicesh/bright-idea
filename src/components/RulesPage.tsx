@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { calculateThreePasses, classicSixRules, xunNineRules, type RuleSystem, type RuleSystemId } from '../rules'
 import { describeElementRelation, elementControls, elementGenerates } from '../features/divination/interpretation'
 import { palaceSemantics } from '../features/divination/palaceSemantics'
-import { intentRecognitionRules, interpretationDirections, topicRecognitionRules } from '../features/divination/questionContext'
+import { intentRecognitionRules, interpretationDirections, specificTopicLabels, topicRecognitionRules } from '../features/divination/questionContext'
 import { getShichen } from '../features/divination/methods'
 import { sixPalaceKnowledge } from '../features/divination/sixPalaceKnowledge'
 import { traditionalPairs, derivedSamePairs } from '../features/divination/dayHourPairs'
@@ -13,7 +13,7 @@ function SixVerseCard({ name, index }: { name: keyof typeof sixPalaceKnowledge; 
   const topics = Object.entries(knowledge.specificTopicMeanings)
   return <details className="six-verse-card" open={index === 0}>
     <summary><span className="six-verse-title">{name}</span><span>{knowledge.polarity}</span><span>{knowledge.element}</span><span className="six-verse-keywords">{keywords}</span><span className="collapse-icon" aria-hidden="true">⌄</span></summary>
-    <div className="six-verse-content"><div className="six-verse-text"><div><h4>口诀原文</h4><p>{knowledge.verse}</p></div><div><h4>现代解释</h4><p>{knowledge.verseModernMeaning}</p></div></div><div><h4>事项细断</h4><div className="topic-meaning-grid">{topics.map(([topic, meaning]) => <article key={topic}><strong>{topic}</strong><p>{meaning.initial}</p><p>{meaning.process}</p><p>{meaning.outcome}</p></article>)}</div></div></div>
+    <div className="six-verse-content"><div className="six-verse-text"><div><h4>口诀原文</h4><p>{knowledge.verse}</p></div><div><h4>现代解释</h4><p>{knowledge.verseModernMeaning}</p></div></div><div><h4>事项细断</h4><div className="topic-meaning-grid">{topics.map(([topic, meaning]) => <article key={topic}><strong>{specificTopicLabels[topic as keyof typeof specificTopicLabels] ?? '其他事项'}</strong><p>{meaning.initial}</p><p>{meaning.process}</p><p>{meaning.outcome}</p></article>)}</div></div></div>
   </details>
 }
 

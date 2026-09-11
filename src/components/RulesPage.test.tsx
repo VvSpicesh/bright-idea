@@ -8,7 +8,7 @@ import { RulesPage } from './RulesPage'
 describe('规则页面', () => {
   it('reads both current rule systems and interpretation configuration', () => {
     render(<RulesPage />)
-    expect(screen.getByText('版本 0.1.0')).toBeInTheDocument()
+    expect(screen.getByText('版本 0.2.0')).toBeInTheDocument()
     let cards = document.querySelectorAll('.palace-rule-card')
     expect(cards).toHaveLength(classicSixRules.palaces.length)
     expect(within(cards[0] as HTMLElement).getByText(classicSixRules.palaces[0].keywords.join('、'))).toBeInTheDocument()

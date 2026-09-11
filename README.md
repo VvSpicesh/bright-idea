@@ -1,31 +1,18 @@
 # bright-idea
 
-手机优先、可安装的小六壬 PWA。当前实现支持六宫小六壬与九宫小六壬（荀爽体系），提供任意三数、任意三字、随机三数和设备日期时间四种起课入口，展示三传、掌诀动画、白话解说与解读方向，并可将程序排盘和问题整理成提示词复制到外部 AI。
+手机优先、可安装的小六壬 PWA，当前版本 `0.2.0`。项目路径：`D:\Github\bright-idea`。
 
-每次起课会自动保存到当前浏览器。记录页支持搜索、筛选、结果复盘、删除、JSON 备份恢复，以及按当前规则从历史取数重新起课；规则页直接展示当前六宫/九宫配置、解说配置、起数示例和五行关系。Cloudflare Worker、Vercel API 和浏览器直连 Gemini/DeepSeek 的历史代码当前未使用，已由 AI 提示词导出替代；运行当前应用不需要配置 API Key 或密码。
+当前功能包括：六宫与九宫小六壬、三数/三字/随机/时间起课、三传与掌诀动画、问题分类驱动的情境化白话解说、六宫事项细断、六宫时间起课日时双宫联断，以及记录保存、复盘和 JSON 备份恢复。规则页展示六宫基础属性、口诀原文与现代解释；内部事项 ID 仅用于程序配置，界面显示中文名称。
 
-## 本地启动
+时间起课的日时双宫只用于六宫：日宫在前、时宫在后，包含 30 组传统异宫组合和 6 组同宫现代推导，不改变三传落宫结果。健康类内容仅作传统文化类象与信息整理，不作诊断、疗效或生死判断。
+
+## 开发
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 检查命令
+AI 功能当前仅生成提示词并复制或跳转外部 AI 网站，不在应用内直连 API，也不需要 API Key。
 
-```bash
-npm run lint
-npm run typecheck
-npm test -- --run
-npm run build
-```
-
-## GitHub Pages
-
-线上地址：<https://vvspicesh.github.io/bright-idea/>
-
-推送到 `main` 后，[Deploy Pages](.github/workflows/deploy-pages.yml) 工作流会依次执行 lint、typecheck、测试和构建，再发布 `dist`。也可以在 GitHub 的 **Actions → Deploy Pages → Run workflow** 手工触发。
-
-## 文档
-
-从[文档目录](docs/README.md)查看产品现状、[本地记录与规则页](docs/records-and-rules.md)、起课方式、解说引擎、测试、部署及已废弃方案。
+部署由 `.github/workflows/deploy-pages.yml` 在 `main` 分支 push 后自动发布到 GitHub Pages。

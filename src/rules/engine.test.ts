@@ -50,7 +50,7 @@ describe('通用三传计算引擎', () => {
       { startIndex: 2, input: '7', rounds: '1', remainder: '0', endIndex: 2 },
     ])
     expect(result.inputs).toEqual(['8', '2', '7'])
-    expect(result.ruleVersion).toBe('0.1.0')
+    expect(result.ruleVersion).toBe('0.2.0')
   })
 
   it('uses modulo boundaries without iterative counting', () => {

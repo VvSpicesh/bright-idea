@@ -1,4 +1,5 @@
 import type { Palace, RuleSystem } from './model'
+import { APP_VERSION } from '../version'
 
 const classicSixPalaces: readonly Palace[] = [
   { index: 0, name: '大安', element: '木', keywords: ['安定', '持续', '缓慢'] },
@@ -27,14 +28,14 @@ const freezePalaces = (palaces: readonly Palace[]): readonly Palace[] =>
 export const classicSixRules: RuleSystem = Object.freeze({
   id: 'classic-six',
   name: '六宫小六壬',
-  ruleVersion: '0.1.0',
+  ruleVersion: APP_VERSION,
   palaces: freezePalaces(classicSixPalaces),
 })
 
 export const xunNineRules: RuleSystem = Object.freeze({
   id: 'xun-nine',
   name: '九宫小六壬（荀爽体系）',
-  ruleVersion: '0.1.0',
+  ruleVersion: APP_VERSION,
   palaces: freezePalaces(xunNinePalaces),
 })
 
