@@ -171,6 +171,30 @@ h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-hei
 .palace-rule-card dl div { display: grid; grid-template-columns: 5.2rem minmax(0, 1fr); gap: 8px; padding: 7px 10px; border-top: 1px solid #e1d5c2; }
 .palace-rule-card dt { color: #806f5c; font-size: .74rem; }
 .palace-rule-card dd { margin: 0; color: #36574e; font-size: .8rem; line-height: 1.5; }
+.six-verse-grid, .day-hour-groups { display: grid; gap: 10px; }
+.six-verse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.six-verse-card, .day-hour-group { border: 1px solid #d9cbb5; border-radius: 6px; background: rgba(255, 255, 255, .3); overflow: hidden; }
+.six-verse-card > summary, .day-hour-group > summary { display: grid; align-items: center; gap: 8px; padding: 9px 10px; color: #36574e; cursor: pointer; list-style: none; }
+.six-verse-card > summary::-webkit-details-marker, .day-hour-group > summary::-webkit-details-marker { display: none; }
+.six-verse-card > summary { grid-template-columns: auto auto auto 1fr auto; }
+.six-verse-card > summary:hover, .day-hour-group > summary:hover { background: rgba(217, 203, 181, .22); }
+.six-verse-title { font-family: 'Noto Serif SC', 'SimSun', serif; font-weight: 700; color: #1f6f5b; }
+.six-verse-keywords { color: #806f5c; font-size: .76rem; }
+.collapse-icon { color: #1f6f5b; font-size: 1rem; transition: transform .2s ease; }
+.six-verse-card[open] .collapse-icon, .day-hour-group[open] .collapse-icon { transform: rotate(180deg); }
+.six-verse-content { padding: 0 10px 10px; border-top: 1px solid #e1d5c2; }
+.six-verse-text { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.six-verse-content h4 { margin: 10px 0 4px; color: #806f5c; font-size: .78rem; }
+.six-verse-content p { margin: 0; }
+.topic-meaning-grid, .day-hour-pairs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.topic-meaning-grid article, .day-hour-pair { padding: 8px; border: 1px solid #e1d5c2; border-radius: 5px; background: rgba(255,255,255,.28); }
+.topic-meaning-grid strong, .pair-type { color: #1f6f5b; font-size: .75rem; }
+.topic-meaning-grid p { margin-top: 4px; font-size: .76rem; }
+.day-hour-group > summary { grid-template-columns: 1fr auto; font-weight: 700; }
+.day-hour-pairs { padding: 0 10px 10px; }
+.day-hour-pair header { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.day-hour-pair p, .day-hour-pair small { display: block; margin: 5px 0 0; font-size: .76rem; line-height: 1.5; }
+.pair-verse { color: #806f5c; }
 .rule-example { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .rule-example-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .rule-example strong { width: 100%; color: #c25735; }
@@ -234,11 +258,11 @@ h2 { margin: 0 0 8px; font-size: 1.35rem; }
   .global-record-notice { color: #ffd0c7; background: #482c29; }
   .record-tools label, .review-form label { color: #b4c5bc; }
   .record-tools input, .record-tools select, .review-form select, .review-form textarea { border-color: #53685f; color: #edf3eb; background: #20342f; }
-  .empty-state, .record-card, .record-metadata div, .snapshot-section, .rule-example, .method-rule-grid article, .relation-rule-list article, .palace-rule-card, .snapshot-passes article, .shichen-grid span { border-color: #455b51; background: rgba(24, 42, 39, .5); }
+  .empty-state, .record-card, .record-metadata div, .snapshot-section, .rule-example, .method-rule-grid article, .relation-rule-list article, .palace-rule-card, .six-verse-card, .day-hour-group, .topic-meaning-grid article, .day-hour-pair, .snapshot-passes article, .shichen-grid span { border-color: #455b51; background: rgba(24, 42, 39, .5); }
   .record-card:hover, .record-card:focus-visible { background: #30463e; }
   .record-card-main { color: #edf3eb; }
   .snapshot-section p, .snapshot-section li, .snapshot-passes span, .rules-section p, .rules-section li, .palace-rule-card dd, .shichen-grid span { color: #b4c5bc; }
-  .palace-rule-card dl div { border-color: #455b51; }
+  .palace-rule-card dl div, .six-verse-content, .topic-meaning-grid article { border-color: #455b51; }
 }
 @media (prefers-reduced-motion: reduce) { .active-marker-position { transition: none; } .active-marker, .active-marker-trail { animation: none; } }
 @media (min-width: 720px) {
@@ -277,7 +301,7 @@ h2 { margin: 0 0 8px; font-size: 1.35rem; }
   .revealed-result .ai-export-actions button { min-width: 0; padding-inline: 5px; }
 }
 @media (max-width: 719px) {
-  .record-tools, .record-metadata, .palace-rule-grid, .method-rule-grid, .relation-rule-list, .rule-example-grid { grid-template-columns: 1fr; }
+  .record-tools, .record-metadata, .palace-rule-grid, .method-rule-grid, .relation-rule-list, .rule-example-grid, .six-verse-grid, .six-verse-text, .topic-meaning-grid, .day-hour-pairs { grid-template-columns: 1fr; }
   .snapshot-passes { grid-template-columns: 1fr; }
   .shichen-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .record-card-main { flex-direction: column; gap: 3px; }
