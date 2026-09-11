@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { calculateThreePasses, classicSixRules, xunNineRules, type RuleSystem, type RuleSystemId } from '../rules'
 import { describeElementRelation, elementControls, elementGenerates } from '../features/divination/interpretation'
 import { palaceSemantics } from '../features/divination/palaceSemantics'
@@ -6,6 +6,37 @@ import { intentRecognitionRules, interpretationDirections, specificTopicLabels, 
 import { getShichen } from '../features/divination/methods'
 import { sixPalaceKnowledge } from '../features/divination/sixPalaceKnowledge'
 import { traditionalPairs, derivedSamePairs } from '../features/divination/dayHourPairs'
+import { RULE_SECTIONS, type RuleSectionId } from './rulesSections'
+
+function RulesSectionNav() {
+  const [activeId, setActiveId] = useState<RuleSectionId>(RULE_SECTIONS[0].id)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  useEffect(() => {
+    const sectionElements = Array.from(document.querySelectorAll('.rules-section')) as HTMLElement[]
+    RULE_SECTIONS.forEach((section, index) => sectionElements[index]?.setAttribute('id', section.id))
+    const sections = RULE_SECTIONS.map(({ id }) => document.getElementById(id)).filter(Boolean) as HTMLElement[]
+    const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+      if (visible[0]) setActiveId(visible[0].target.id as RuleSectionId)
+    }, { rootMargin: '-96px 0px -55% 0px', threshold: [0, 0.2, 0.6] })
+    sections.forEach((section) => observer?.observe(section))
+    const hash = window.location.hash.slice(1) as RuleSectionId
+    if (RULE_SECTIONS.some((section) => section.id === hash)) window.setTimeout(() => document.getElementById(hash)?.scrollIntoView({ block: 'start' }), 0)
+    return () => observer?.disconnect()
+  }, [])
+  const jump = (id: RuleSectionId) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.history.replaceState(null, '', `#${id}`)
+    setActiveId(id)
+    setMobileOpen(false)
+  }
+  return <nav className={`rules-toc ${mobileOpen ? 'is-open' : ''}`} aria-label="规则目录">
+    <button className="rules-toc-toggle" type="button" aria-expanded={mobileOpen} onClick={() => setMobileOpen((open) => !open)}>规则目录：{RULE_SECTIONS.find((section) => section.id === activeId)?.title}</button>
+    <div className="rules-toc-list">{RULE_SECTIONS.map((section) => <button key={section.id} className={activeId === section.id ? 'is-active' : ''} type="button" aria-current={activeId === section.id ? 'location' : undefined} onClick={() => jump(section.id)}>{section.title}</button>)}</div>
+  </nav>
+}
+
+const sectionTitle = (id: RuleSectionId) => RULE_SECTIONS.find((section) => section.id === id)!.title
 
 function SixVerseCard({ name, index }: { name: keyof typeof sixPalaceKnowledge; index: number }) {
   const knowledge = sixPalaceKnowledge[name]
@@ -47,7 +78,7 @@ export function RulesPage() {
 
   return <section className="content-panel rules-page" aria-labelledby="rules-title">
     <div className="page-heading"><div><p className="eyebrow">当前配置</p><h2 id="rules-title">规则</h2></div><span>版本 {system.ruleVersion}</span></div>
-    <fieldset className="system-choice"><legend>规则体系</legend>{systems.map((item) => <label className="choice" key={item.id}><input type="radio" name="rules-page-system" checked={systemId === item.id} onChange={() => setSystemId(item.id)} /><span>{item.name}</span></label>)}</fieldset>
+    <fieldset className="system-choice"><legend>规则体系</legend>{systems.map((item) => <label className="choice" key={item.id}><input type="radio" name="rules-page-system" checked={systemId === item.id} onChange={() => setSystemId(item.id)} /><span>{item.name}</span></label>)}</fieldset><div className="rules-mobile-toc"><RulesSectionNav /></div><div className="rules-layout"><aside className="rules-desktop-toc"><RulesSectionNav /></aside><div className="rules-content">
 
     <section className="rules-section"><h3>宫位顺序与解说配置</h3><p>以下内容直接读取当前规则和解说配置；没有配置的字段显示“未设定”。</p><div className="palace-rule-grid">{system.palaces.map((palace) => {
       const semantics = palaceSemantics[palace.name as keyof typeof palaceSemantics]
@@ -67,5 +98,5 @@ export function RulesPage() {
     <section className="rules-section"><h3>解说逻辑</h3><p>初传代表前期，中传代表发展过程，末传代表结果倾向。topic 方向包括 {interpretationDirections.join('、')}；自动识别顺序为 {topicRecognitionRules.map(([direction]) => direction).join(' → ')}，未匹配时为综合。intent 依次识别 {intentRecognitionRules.map(([intent, pattern]) => `${intent}（${pattern.source.replaceAll('|', '、')}）`).join('、')}，未匹配时为 trend。</p><p>六宫天干、地支、藏干属于进阶类象，存在流派差异，不参与三传落宫计算。topic 和 intent 只调整表达角度，不修改三传和五行。解说属于规则辅助，不是事实结论。AI 按钮只复制提示词并跳转外部网站，不调用 API。</p></section>
 
     <section className="rules-section"><h3>版本与历史快照</h3><p>当前体系规则版本为 {system.ruleVersion}。历史记录保存起课当时的规则版本、三传、步骤和解说快照；查看旧记录不会按当前配置重新计算。使用“按当前规则重新起课”会新增记录，不覆盖旧记录。</p></section>
-  </section>
+    </div></div></section>
 }

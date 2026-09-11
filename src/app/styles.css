@@ -161,7 +161,16 @@ h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-hei
 .review-form { display: grid; gap: 9px; }
 .review-form textarea { min-height: 84px; resize: vertical; }
 .detail-actions .primary-button { width: auto; margin: 0; }
-.rules-section { margin-top: 20px; }
+.rules-section { margin-top: 20px; scroll-margin-top: 88px; }
+.rules-layout { display: block; }
+.rules-mobile-toc { margin-bottom: 12px; }
+.rules-desktop-toc { display: none; }
+.rules-toc-toggle { width: 100%; padding: 8px 10px; border: 1px solid #d9cbb5; border-radius: 6px; color: #536b64; background: rgba(255,255,255,.3); text-align: left; cursor: pointer; font: inherit; font-size: .8rem; }
+.rules-toc-list { display: none; gap: 2px; margin-top: 6px; }
+.rules-toc.is-open .rules-toc-list { display: grid; }
+.rules-toc-list button { padding: 7px 9px; border: 0; border-left: 3px solid transparent; border-radius: 4px; color: #536b64; background: transparent; text-align: left; cursor: pointer; font: inherit; font-size: .8rem; }
+.rules-toc-list button:hover, .rules-toc-list button:focus-visible { background: #fff8ed; outline: none; }
+.rules-toc-list button.is-active { border-left-color: #c25735; color: #c25735; background: #fff8ed; font-weight: 600; }
 .palace-rule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .palace-rule-card { overflow: hidden; border: 1px solid #d9cbb5; border-radius: 6px; background: rgba(255, 255, 255, .3); }
 .palace-rule-card header { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; color: #fff; background: #1f6f5b; }
@@ -261,10 +270,17 @@ h2 { margin: 0 0 8px; font-size: 1.35rem; }
   .record-card:hover, .record-card:focus-visible { background: #30463e; }
   .record-card-main { color: #edf3eb; }
   .snapshot-section p, .snapshot-section li, .snapshot-passes span, .rules-section p, .rules-section li, .palace-rule-card dd, .shichen-grid span { color: #b4c5bc; }
+  .rules-toc-toggle, .rules-toc-list button { color: #b4c5bc; border-color: #455b51; }
+  .rules-toc-list button:hover, .rules-toc-list button:focus-visible, .rules-toc-list button.is-active { background: rgba(72,44,41,.5); }
   .palace-rule-card dl div, .six-verse-content, .topic-meaning-grid article { border-color: #455b51; }
 }
 @media (prefers-reduced-motion: reduce) { .active-marker-position { transition: none; } .active-marker, .active-marker-trail { animation: none; } }
 @media (min-width: 720px) {
+  .rules-layout { display: grid; grid-template-columns: minmax(180px, 220px) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .rules-mobile-toc { display: none; }
+  .rules-desktop-toc { display: block; position: sticky; top: 76px; align-self: start; }
+  .rules-desktop-toc .rules-toc-list { display: grid; margin-top: 0; }
+  .rules-desktop-toc .rules-toc-toggle { display: none; }
   .main-content.has-library { width: min(100%, 1180px); }
   .app-shell:has(.main-content.has-result) { height: 100dvh; min-height: 0; }
   .main-content.has-result { display: flex; width: min(100%, 1400px); height: 100%; min-height: 0; flex: none; flex-direction: column; padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) var(--bottom-nav-height) max(12px, env(safe-area-inset-left)); }
