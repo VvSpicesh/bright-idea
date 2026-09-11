@@ -3,6 +3,7 @@ import { classicSixRules, xunNineRules, type Palace } from '../../rules'
 import { buildAiInterpretationPrompt } from '../ai/aiPrompt'
 import { createDivinationInterpretation, describeElementRelation, generateStageInterpretations, parseQuestion, synthesizeOverallTrend } from './interpretation'
 import { classifySixQuestion, interpretationDirections } from './questionContext'
+import { sixPalaceKnowledge } from './sixPalaceKnowledge'
 
 const passes = [classicSixRules.palaces[5], classicSixRules.palaces[4], classicSixRules.palaces[0]] as const
 const sentences = (text: string) => text.split(/[。！？]/).map((part) => part.trim()).filter(Boolean)
@@ -63,6 +64,13 @@ describe('问题驱动的三传解说', () => {
     const output = [reading.summary, ...reading.passReadings, reading.advice, ...reading.evidence].join('')
     expect(output).toContain('医生')
     expect(output).not.toMatch(/癌症|生死|保证治愈|必然好转/)
+  })
+
+  it('keeps all six traditional body references configured without weakening health safeguards', () => {
+    Object.values(sixPalaceKnowledge).forEach((knowledge) => expect(knowledge.bodyMeaning).toBeTruthy())
+    const reading = createDivinationInterpretation(passes, undefined, '身体恢复怎么样', 'classic-six')
+    expect(reading.evidence.join('')).toContain('不判断具体疾病')
+    expect(reading.evidence.join('')).toContain('医生、检查结果')
   })
 
   it('retains all five directional element relationships and their plain explanations', () => {
