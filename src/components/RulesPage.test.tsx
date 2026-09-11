@@ -14,6 +14,7 @@ describe('规则页面', () => {
     expect(within(cards[0] as HTMLElement).getByText(classicSixRules.palaces[0].keywords.join('、'))).toBeInTheDocument()
     expect(within(cards[0] as HTMLElement).getByText('阳／木')).toBeInTheDocument()
     expect(within(cards[0] as HTMLElement).getByText(sixPalaceKnowledge.大安.generalMeaning)).toBeInTheDocument()
+    expect(within(cards[0] as HTMLElement).getByText('甲乙／寅卯／丁')).toBeInTheDocument()
     expect(within(cards[0] as HTMLElement).getByText('1、4、5（仅展示，不参与起课计算）')).toBeInTheDocument()
     expect(screen.getByText('结果：空亡 → 小吉 → 赤口')).toBeInTheDocument()
 
