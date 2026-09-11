@@ -1,5 +1,7 @@
 # bright-idea AI Worker
 
+> 当前未使用，已由前端 AI 提示词导出替代。以下内容是历史部署说明；当前应用不需要配置本 Worker、API Key 或密码。
+
 独立 Cloudflare Worker，为前端提供受密码保护的 OpenAI-compatible 解读接口。Worker 不记录密码、API Key 或问题正文。
 
 ## 接口
