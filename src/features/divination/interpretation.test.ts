@@ -2,12 +2,53 @@ import { describe, expect, it } from 'vitest'
 import { classicSixRules, xunNineRules, type Palace } from '../../rules'
 import { buildAiInterpretationPrompt } from '../ai/aiPrompt'
 import { createDivinationInterpretation, describeElementRelation, generateStageInterpretations, parseQuestion, synthesizeOverallTrend } from './interpretation'
-import { interpretationDirections } from './questionContext'
+import { classifySixQuestion, interpretationDirections } from './questionContext'
 
 const passes = [classicSixRules.palaces[5], classicSixRules.palaces[4], classicSixRules.palaces[0]] as const
 const sentences = (text: string) => text.split(/[。！？]/).map((part) => part.trim()).filter(Boolean)
 
 describe('问题驱动的三传解说', () => {
+  it('generates contextual six-palace readings without changing nine-palace narration', () => {
+    const [stable, delay, fast] = classicSixRules.palaces
+    const work = createDivinationInterpretation([stable, delay, fast], undefined, '这次求职能成功吗？', 'classic-six')
+    const love = createDivinationInterpretation([stable, delay, fast], undefined, '这段感情会复合吗？', 'classic-six')
+    const nine = createDivinationInterpretation([xunNineRules.palaces[0], xunNineRules.palaces[1], xunNineRules.palaces[2]], undefined, '这次求职能成功吗？', 'xun-nine')
+    expect(work.passReadings[0]).toContain('工作基础较明确')
+    expect(love.passReadings[0]).toContain('关系倾向持续')
+    expect(work.passReadings).not.toEqual(love.passReadings)
+    expect(nine.passReadings[0]).toContain('前期：')
+  })
+
+  it('uses distinct stage roles, an independent conclusion, and actionable six-palace advice', () => {
+    const [stable, delay, fast] = classicSixRules.palaces
+    const reading = createDivinationInterpretation([stable, delay, fast], undefined, '这次求职能成功吗？', 'classic-six')
+    expect(reading.passReadings[0]).toContain('初传')
+    expect(reading.passReadings[1]).toContain('中传')
+    expect(reading.passReadings[2]).toContain('末传')
+    expect(reading.summary).not.toBe(reading.passReadings.join(''))
+    expect(reading.advice.split('\n')).toHaveLength(2)
+  })
+
+  it('classifies element relations and falls back to generic six-palace explanation', () => {
+    expect(describeElementRelation('木', '火').relation).toBe('相生')
+    expect(describeElementRelation('火', '木').relation).toBe('受生')
+    expect(describeElementRelation('木', '土').relation).toBe('相克')
+    expect(describeElementRelation('土', '木').relation).toBe('受克')
+    expect(describeElementRelation('木', '木').relation).toBe('同类')
+    const reading = createDivinationInterpretation([classicSixRules.palaces[0], classicSixRules.palaces[1], classicSixRules.palaces[2]], undefined, '', 'classic-six')
+    expect(reading.summary).toContain('未填写具体问题')
+    expect(reading.evidence).toContain('识别到的问题领域：通用。')
+    expect(classifySixQuestion('求职面试收入').domain).toBe('事业')
+    expect(classifySixQuestion('求职面试收入').auxiliaryDomains).toContain('财运')
+  })
+
+  it('keeps health readings non-diagnostic and grounded in medical care', () => {
+    const reading = createDivinationInterpretation(passes, undefined, '手术后身体恢复怎么样', 'classic-six')
+    const output = [reading.summary, ...reading.passReadings, reading.advice, ...reading.evidence].join('')
+    expect(output).toContain('医生')
+    expect(output).not.toMatch(/癌症|生死|保证治愈|必然好转/)
+  })
+
   it('retains all five directional element relationships and their plain explanations', () => {
     expect(describeElementRelation('木', '火')).toMatchObject({ relation: '相生', description: expect.stringContaining('前一阶段可能推动后一阶段') })
     expect(describeElementRelation('火', '木')).toMatchObject({ relation: '受生', description: expect.stringContaining('后续条件可能对前面形成补充') })

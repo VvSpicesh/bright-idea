@@ -23,7 +23,7 @@ export interface CreateRecordSnapshotInput {
 export function createRecordSnapshot(input: CreateRecordSnapshotInput): DivinationRecord {
   const { id, runId, createdAt, question, ruleSystem, result, source } = input
   const direction = detectInterpretationDirection(question)
-  const generated = createDivinationInterpretation([result.first, result.second, result.third], direction, question)
+  const generated = createDivinationInterpretation([result.first, result.second, result.third], direction, question, result.ruleSystemId)
   const originalInput = source.method === 'character' ? source.entries.map((entry) => entry.original).join('')
     : source.method === 'time' ? source.values.solarText
       : result.inputs.join('、')

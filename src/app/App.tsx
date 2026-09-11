@@ -330,7 +330,7 @@ function ResultView({ result, question, source, onBack, onRandomize }: { result:
       <div className="revealed-result">
         <div className={animationComplete ? 'result-right-top' : 'result-right-top is-animation-pending'} aria-hidden={!animationComplete}>
           <div className="passes">{passes.map((palace, index) => <article className="pass-card" key={labels[index]}><p className="pass-label">{labels[index]}</p><h3>{palace.name}</h3><p>{palace.element} · {palace.direction || '方位未设定'}</p><p className="keywords">{['观察基础条件', '观察推进变化', '观察收尾条件'][index]}</p></article>)}</div>
-          <DivinationInterpretation passes={passes} direction={direction} question={question} onDirectionChange={setDirection} />
+          <DivinationInterpretation passes={passes} direction={direction} question={question} ruleSystemId={result.ruleSystemId} onDirectionChange={setDirection} />
         </div>
         <LocalGeminiInterpretation pending={!animationComplete} context={{
           question,

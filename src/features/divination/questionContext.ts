@@ -1,10 +1,14 @@
-export const interpretationDirections = ['综合', '感情', '工作/事业', '财运', '健康', '出行', '寻物', '学业'] as const
+import type { SixQuestionDomain } from './sixPalaceKnowledge'
+
+export const interpretationDirections = ['综合', '感情', '工作/事业', '财运', '健康', '出行', '寻物', '学业', '纠纷', '人物'] as const
 export type InterpretationDirection = typeof interpretationDirections[number]
 export type Topic = '综合' | '感情' | '工作' | '财运' | '健康' | '出行' | '寻物' | '学业'
 export type Intent = 'outcome' | 'timing' | 'advice' | 'trend'
 export interface QuestionContext { question: string; topic: Topic; intent: Intent }
 
 export const topicRecognitionRules: readonly [InterpretationDirection, RegExp][] = [
+  ['纠纷', /官司|投诉|争吵|矛盾|赔偿|纠纷|冲突/],
+  ['人物', /某人怎么样|性格|是否可信|是否合作|这个人/],
   ['寻物', /寻物|找回|丢失|丢了|遗失|失物|不见|找不到/],
   ['健康', /健康|身体|生病|病情|症状|医院|检查|治疗|手术|疼|痛|康复/],
   ['感情', /感情|恋爱|结婚|婚姻|复合|分手|对象|伴侣|喜欢|表白|相亲|关系/],
@@ -18,6 +22,41 @@ export function detectInterpretationDirection(question: string): InterpretationD
   return topicRecognitionRules.find(([, pattern]) => pattern.test(question))?.[0] ?? '综合'
 }
 
+const sixDomainKeywords: Readonly<Record<Exclude<SixQuestionDomain, '通用'>, readonly string[]>> = {
+  事业: ['工作', '求职', '面试', '升职', '项目', '客户', '公司', '职位'],
+  财运: ['钱', '收入', '投资', '回款', '生意', '价格', '买卖'],
+  感情: ['恋爱', '婚姻', '对象', '复合', '关系', '喜欢'],
+  学业: ['考试', '学习', '成绩', '学校', '升学'],
+  健康: ['身体', '疾病', '手术', '住院', '恢复', '检查'],
+  出行: ['旅行', '搬家', '出差', '行程', '航班'],
+  纠纷: ['官司', '投诉', '争吵', '矛盾', '赔偿'],
+  寻物: ['丢失', '找到', '东西在哪'],
+  人物: ['某人怎么样', '性格', '是否可信', '是否合作'],
+}
+
+const directionDomains: Partial<Record<InterpretationDirection, SixQuestionDomain>> = {
+  感情: '感情', '工作/事业': '事业', 财运: '财运', 健康: '健康', 出行: '出行', 寻物: '寻物', 学业: '学业', 纠纷: '纠纷', 人物: '人物',
+}
+
+export interface SixQuestionContext {
+  readonly domain: SixQuestionDomain
+  readonly auxiliaryDomains: readonly SixQuestionDomain[]
+  readonly hasQuestion: boolean
+}
+
+// 关键词集中在此处；按命中关键词数选择主领域，平局沿声明顺序处理，其他仅作辅助信息。
+export function classifySixQuestion(question = '', direction?: InterpretationDirection): SixQuestionContext {
+  const normalized = question.trim()
+  const manuallySelected = direction && direction !== '综合' ? directionDomains[direction] : undefined
+  const matches = (Object.entries(sixDomainKeywords) as [Exclude<SixQuestionDomain, '通用'>, readonly string[]][])
+    .map(([domain, keywords]) => ({ domain, score: keywords.filter((keyword) => normalized.includes(keyword)).length }))
+    .filter(({ score }) => score > 0)
+  if (!matches.length) return { domain: manuallySelected ?? '通用', auxiliaryDomains: [], hasQuestion: Boolean(normalized) }
+  const topScore = Math.max(...matches.map(({ score }) => score))
+  const primary = matches.find(({ score }) => score === topScore)!.domain
+  return { domain: primary, auxiliaryDomains: matches.filter(({ domain }) => domain !== primary).map(({ domain }) => domain), hasQuestion: true }
+}
+
 export const intentRecognitionRules: readonly [Exclude<Intent, 'trend'>, RegExp][] = [
   ['timing', /什么时候|何时|多久/],
   ['advice', /怎么|如何|怎么办/],
@@ -28,7 +67,7 @@ export const intentRecognitionRules: readonly [Exclude<Intent, 'trend'>, RegExp]
 export function parseQuestion(question = '', direction?: InterpretationDirection): QuestionContext {
   const normalized = question.trim()
   const selected = direction ?? detectInterpretationDirection(normalized)
-  const topic = selected === '工作/事业' ? '工作' : selected
+  const topic = selected === '工作/事业' ? '工作' : selected === '纠纷' || selected === '人物' ? '综合' : selected
   const intent: Intent = intentRecognitionRules.find(([, pattern]) => pattern.test(normalized))?.[0] ?? 'trend'
   return { question: normalized, topic, intent }
 }
