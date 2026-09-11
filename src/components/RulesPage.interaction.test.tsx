@@ -7,6 +7,8 @@ describe('规则页折叠卡片', () => {
     render(<RulesPage />)
     const cards = document.querySelectorAll('.six-verse-card')
     expect(cards).toHaveLength(6)
+    expect(document.querySelector('.six-verse-grid')).toHaveClass('six-verse-grid')
+    expect(document.querySelector('.day-hour-groups')).toHaveClass('day-hour-groups')
     expect([...cards].filter((card) => card.hasAttribute('open'))).toHaveLength(1)
     expect(screen.getByText('大安起首 · 5组传统组合')).toBeInTheDocument()
     expect(document.querySelectorAll('.day-hour-group')).toHaveLength(7)
