@@ -51,7 +51,9 @@ function isTime(value: unknown): boolean {
 function isInterpretation(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false
   const result = value as Record<string, unknown>
-  return hasOnlyKeys(result, ['summary', 'passReadings', 'turningPoints', 'advice', 'evidence'])
+  const pair = result.dayHourPair as Record<string, unknown> | undefined
+  const validPair = pair === undefined || (pair !== null && typeof pair === 'object' && hasOnlyKeys(pair, ['dayPalace', 'hourPalace', 'sourceType', 'text', 'modernMeaning', 'topicMeaning', 'traditionalHint', 'sourceUrl']) && isString(pair.dayPalace) && isString(pair.hourPalace) && ['traditional', 'derived'].includes(String(pair.sourceType)) && isString(pair.text) && isString(pair.modernMeaning) && isOptionalString(pair.topicMeaning) && isOptionalString(pair.traditionalHint) && isOptionalString(pair.sourceUrl))
+  return hasOnlyKeys(result, ['summary', 'passReadings', 'turningPoints', 'advice', 'evidence', 'dayHourPair']) && validPair
     && isString(result.summary) && isStringArray(result.passReadings) && result.passReadings.length === 3
     && isStringArray(result.turningPoints) && result.turningPoints.length === 2
     && isString(result.advice) && isStringArray(result.evidence)

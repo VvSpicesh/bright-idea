@@ -2,6 +2,7 @@ import type { ElementRelation } from './interpretation'
 import type { Passes, Transitions } from './interpretationNarrative'
 import { sixPalaceKnowledge, type SixPalaceKnowledge, type SixPalaceName, type SixQuestionDomain } from './sixPalaceKnowledge'
 import { specificTopicLabels, type SixQuestionContext } from './questionContext'
+import type { DayHourPairMeaning } from './dayHourPairs'
 
 const stages = ['初传', '中传', '末传'] as const
 
@@ -61,7 +62,7 @@ function stageReading(passes: Passes, transitions: Transitions, context: SixQues
   const palace = passes[index]
   const current = knowledgeFor(palace.name)
   const subject = context.domain === '通用' ? '事情的发展' : context.domain === '人物' ? '所问之人的表现' : `${context.domain}问题`
-  const base = `“${palace.name}”主${current.generalMeaning}`
+  const base = `“${palace.name}”主${current.generalMeaning}${context.specificTopic === 'relationship' ? '；关系倾向持续需结合双方行动' : ''}`
   const topic = domainMeaning(current, context.domain)
   const specific = context.specificTopic ? current.specificTopicMeanings[context.specificTopic] : undefined
   const specificLabel = context.specificTopic ? specificTopicLabels[context.specificTopic] : undefined
@@ -92,7 +93,7 @@ function turningPoint(passes: Passes, transitions: Transitions, index: 0 | 1): s
   return `${index === 0 ? '初→中' : '中→末'}（${passes[index].name}→${passes[index + 1].name}）：${theme}；${relationMeaning(transitions[index].relation)}。阴阳${from.polarity}→${to.polarity}，${polarityMeaning(from, to)}。`
 }
 
-export function createSixPalaceInterpretation(passes: Passes, transitions: Transitions, context: SixQuestionContext) {
+export function createSixPalaceInterpretation(passes: Passes, transitions: Transitions, context: SixQuestionContext, dayHourPair?: DayHourPairMeaning) {
   const finalKnowledge = knowledgeFor(passes[2].name)
   const finalMeaning = domainMeaning(finalKnowledge, context.domain)
   const finalSpecific = context.specificTopic ? finalKnowledge.specificTopicMeanings[context.specificTopic] : undefined
@@ -102,6 +103,10 @@ export function createSixPalaceInterpretation(passes: Passes, transitions: Trans
       ? `就${specificLabel}而言，末传${passes[2].name}提示${finalSpecific.outcome}；应以${finalSpecific.action}来核实后续。`
       : `针对“${context.domain}”所问，末传${passes[2].name}显示${finalMeaning}；结合前两传变化，更适合以${finalKnowledge.advice}来判断后续能否落实。`
     : `本次三传最终落在${passes[2].name}，整体以${finalKnowledge.generalMeaning}为主要倾向。未填写具体问题，补充对象后可获得更有针对性的说明。`
+  const pairTopic = dayHourPair && context.specificTopic ? dayHourPair.topicHints[context.specificTopic] : dayHourPair?.modernMeaning
+  const pairReading = dayHourPair ? `日时联断：日宫${dayHourPair.dayPalace}＋时宫${dayHourPair.hourPalace}，由日宫进入时宫。${pairTopic ?? dayHourPair.modernMeaning}（${dayHourPair.sourceType === 'traditional' ? '传统口诀' : '同宫推导'}）` : undefined
+  const summaryLabel = context.specificTopic === 'relationship' ? '感情' : specificLabel
+  const summaryWithPair = context.specificTopic ? `针对“${summaryLabel}”所问：${summary}${pairReading ? ` ${pairReading}` : ''}` : (pairReading ? `${summary} ${pairReading}` : summary)
   const advice = [
     context.specificTopic ? `处理中传：${knowledgeFor(passes[1].name).specificTopicMeanings[context.specificTopic].action}。` : `围绕末传：${finalKnowledge.advice}。`,
     context.specificTopic ? `落实末传：${finalSpecific!.action}。` : `针对${context.domain}：${concreteAction(context.domain, passes[2].name)}`,
@@ -111,7 +116,7 @@ export function createSixPalaceInterpretation(passes: Passes, transitions: Trans
     ? '健康类内容仅作传统文化研究与娱乐用途，不作生命风险预测、不判断具体疾病、不承诺治疗结果；请以医生、检查结果和实际病情变化为准。'
     : '以上为传统文化研究与娱乐用途，不代表现实因果。'
   return {
-    summary,
+    summary: summaryWithPair,
     passReadings: [stageReading(passes, transitions, context, 0), stageReading(passes, transitions, context, 1), stageReading(passes, transitions, context, 2)],
     turningPoints: [turningPoint(passes, transitions, 0), turningPoint(passes, transitions, 1)],
     advice,
@@ -121,11 +126,13 @@ export function createSixPalaceInterpretation(passes: Passes, transitions: Trans
         return hint ? [`${stages[index]}传统提示：${hint}`] : []
       })
       : [],
+    dayHourPair: pairReading && dayHourPair ? { dayPalace: dayHourPair.dayPalace, hourPalace: dayHourPair.hourPalace, sourceType: dayHourPair.sourceType, text: pairReading, modernMeaning: dayHourPair.modernMeaning, topicMeaning: pairTopic, traditionalHint: dayHourPair.traditionalHint, sourceUrl: dayHourPair.sourceUrl } : undefined,
     evidence: [
       `三传宫位：${passes.map((palace) => palace.name).join(' → ')}。`,
       `五行关系：初→中 ${transitions[0].from}${transitions[0].relation}${transitions[0].to}；中→末 ${transitions[1].from}${transitions[1].relation}${transitions[1].to}。`,
       `识别到的问题领域：${context.domain}${context.specificTopic ? `（${specificLabel}）` : ''}${context.auxiliaryDomains.length ? `；辅助：${context.auxiliaryDomains.join('、')}` : ''}。`,
       healthNote,
+      ...(pairReading ? [pairReading, ...(dayHourPair?.traditionalHint ? [`传统提示：${dayHourPair.traditionalHint}`] : [])] : []),
     ],
   }
 }

@@ -42,6 +42,16 @@ export interface InterpretationSnapshot {
   readonly turningPoints: readonly string[]
   readonly advice: string
   readonly evidence: readonly string[]
+  readonly dayHourPair?: {
+    readonly dayPalace: string
+    readonly hourPalace: string
+    readonly sourceType: 'traditional' | 'derived'
+    readonly text: string
+    readonly modernMeaning: string
+    readonly topicMeaning?: string
+    readonly traditionalHint?: string
+    readonly sourceUrl?: string
+  }
 }
 
 export interface DivinationRecord {

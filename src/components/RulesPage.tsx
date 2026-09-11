@@ -5,6 +5,7 @@ import { palaceSemantics } from '../features/divination/palaceSemantics'
 import { intentRecognitionRules, interpretationDirections, topicRecognitionRules } from '../features/divination/questionContext'
 import { getShichen } from '../features/divination/methods'
 import { sixPalaceKnowledge } from '../features/divination/sixPalaceKnowledge'
+import { traditionalPairs, derivedSamePairs } from '../features/divination/dayHourPairs'
 
 const systems: readonly RuleSystem[] = [classicSixRules, xunNineRules]
 const examples: Record<RuleSystemId, readonly [bigint, bigint, bigint]> = {
@@ -47,6 +48,7 @@ export function RulesPage() {
     <section className="rules-section"><h3>五行关系</h3><p>相生：{Object.entries(elementGenerates).map(([from, to]) => `${from}生${to}`).join(' → ')}</p><p>相克：{Object.entries(elementControls).map(([from, to]) => `${from}克${to}`).join(' → ')}</p><div className="relation-rule-list">{relations.map(([label, relation]) => <article key={label}><strong>{label}</strong><p>{relation.description}</p></article>)}</div></section>
 
     <section className="rules-section"><h3>六宫口诀与事项细断</h3><p>口诀原文与现代解释已在六宫卡片中并列展示。方位、时段和结果只作传统类象参考，不参与三传落宫计算；健康内容不能用于诊断、疗效或生死判断。</p><p>口诀存在版本和流派差异：大安求财方位有东方、南方、坤方等说法；留连土／螣蛇与水／玄武、小吉水／玄武与木／六合、速喜“申午未”的方位或时段解释，均不覆盖当前六宫基础配置。口诀中的诅咒、恶鬼等仅保留为原文，不作为现实事实。</p></section>
+    <section className="rules-section"><h3>日时双宫</h3><p>仅用于六宫时间起课：日宫在前、时宫在后，顺序不同含义不同；不改变三传落宫，也不用于数字、文字、随机或九宫起课。资料存在流派差异，原文仅作折叠查看。</p>{sixPalaceKnowledge && Array.from(new Set(traditionalPairs.map((pair) => pair.dayPalace))).map((day) => <details key={day}><summary>{day}起首（5组传统组合）</summary><div>{traditionalPairs.filter((pair) => pair.dayPalace === day).map((pair) => <p key={`${pair.dayPalace}-${pair.hourPalace}`}><b>{pair.dayPalace}＋{pair.hourPalace}</b>：{pair.sourceVerse}<br />现代解释：{pair.modernMeaning}</p>)}</div></details>)}<details><summary>同宫组合（6组现代推导）</summary>{derivedSamePairs.map((pair) => <p key={`${pair.dayPalace}-${pair.hourPalace}`}><b>{pair.dayPalace}＋{pair.hourPalace}</b>：{pair.modernMeaning}（不属于所引日加时口诀）</p>)}</details></section>
 
     <section className="rules-section"><h3>解说逻辑</h3><p>初传代表前期，中传代表发展过程，末传代表结果倾向。topic 方向包括 {interpretationDirections.join('、')}；自动识别顺序为 {topicRecognitionRules.map(([direction]) => direction).join(' → ')}，未匹配时为综合。intent 依次识别 {intentRecognitionRules.map(([intent, pattern]) => `${intent}（${pattern.source.replaceAll('|', '、')}）`).join('、')}，未匹配时为 trend。</p><p>六宫天干、地支、藏干属于进阶类象，存在流派差异，不参与三传落宫计算。topic 和 intent 只调整表达角度，不修改三传和五行。解说属于规则辅助，不是事实结论。AI 按钮只复制提示词并跳转外部网站，不调用 API。</p></section>
 

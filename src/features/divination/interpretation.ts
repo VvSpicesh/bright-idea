@@ -3,6 +3,8 @@ import { palaceSemantics } from './palaceSemantics'
 import { classifySixQuestion, parseQuestion, topicLanguage, type InterpretationDirection } from './questionContext'
 import { generateStageInterpretations, generateTurningPoints, synthesizeOverallTrend, type Passes } from './interpretationNarrative'
 import { createSixPalaceInterpretation } from './sixPalaceInterpretation'
+import { getDayHourPair } from './dayHourPairs'
+import type { DivinationMethod } from './methods'
 
 export { detectInterpretationDirection, interpretationDirections, parseQuestion } from './questionContext'
 export type { InterpretationDirection } from './questionContext'
@@ -26,12 +28,13 @@ export function describeElementRelation(from: Element, to: Element): ElementTran
   return { from, to, relation: '受克', description: `${to}克${from}：后续变化可能反制原有状态，原来的安排可能需要调整` }
 }
 
-export function createDivinationInterpretation(passes: Passes, direction?: InterpretationDirection, question = '', ruleSystemId?: RuleSystemId) {
+export function createDivinationInterpretation(passes: Passes, direction?: InterpretationDirection, question = '', ruleSystemId?: RuleSystemId, method?: DivinationMethod) {
   const context = parseQuestion(question, direction)
   const [first, second, third] = passes
   const transitions = [describeElementRelation(first.element, second.element), describeElementRelation(second.element, third.element)] as const
   if (ruleSystemId === 'classic-six') {
-    return { context, transitions, ...createSixPalaceInterpretation(passes, transitions, classifySixQuestion(question, direction)) }
+    const pair = method === 'time' ? getDayHourPair(second.name as keyof typeof import('./sixPalaceKnowledge').sixPalaceKnowledge, third.name as keyof typeof import('./sixPalaceKnowledge').sixPalaceKnowledge) : undefined
+    return { context, transitions, ...createSixPalaceInterpretation(passes, transitions, classifySixQuestion(question, direction), pair) }
   }
   const advicePalaces = [...new Map([second, third].map((palace) => [palace.name, palace])).values()]
   const uniquePalaces = [...new Map(passes.map((palace) => [palace.name, palace])).values()]
