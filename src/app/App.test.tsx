@@ -80,6 +80,22 @@ describe('三数起课应用流程', () => {
     expect(screen.getByRole('button', { name: '下一项' })).toBeInTheDocument()
   })
 
+  it('passes the edited question into a newly generated six-palace interpretation', () => {
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('所问事项 （可选）'), { target: { value: '这次求职能成功吗' } })
+    enterNumbers(['1', '2', '2'])
+    fireEvent.click(screen.getByRole('button', { name: '开始起课' }))
+    fireEvent.click(screen.getByRole('button', { name: '跳过动画' }))
+    expect(screen.getByText(/工作基础较明确，适合按计划推进/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '重新起课' }))
+    fireEvent.change(screen.getByLabelText('所问事项 （可选）'), { target: { value: '这段感情会怎么样' } })
+    fireEvent.click(screen.getByRole('button', { name: '开始起课' }))
+    fireEvent.click(screen.getByRole('button', { name: '跳过动画' }))
+    expect(screen.getByText(/关系倾向持续，但发展速度不快/)).toBeInTheDocument()
+    expect(screen.getByText(/针对“感情”所问/)).toBeInTheDocument()
+  })
+
   it('starts a random divination and exposes a compact change-set action', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('tab', { name: '随机起课' }))

@@ -25,7 +25,7 @@ export function detectInterpretationDirection(question: string): InterpretationD
 const sixDomainKeywords: Readonly<Record<Exclude<SixQuestionDomain, '通用'>, readonly string[]>> = {
   事业: ['工作', '求职', '面试', '升职', '项目', '客户', '公司', '职位'],
   财运: ['钱', '收入', '投资', '回款', '生意', '价格', '买卖'],
-  感情: ['恋爱', '婚姻', '对象', '复合', '关系', '喜欢'],
+  感情: ['感情', '恋爱', '婚姻', '对象', '复合', '关系', '喜欢'],
   学业: ['考试', '学习', '成绩', '学校', '升学'],
   健康: ['身体', '疾病', '手术', '住院', '恢复', '检查'],
   出行: ['旅行', '搬家', '出差', '行程', '航班'],

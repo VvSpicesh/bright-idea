@@ -19,6 +19,22 @@ describe('问题驱动的三传解说', () => {
     expect(nine.passReadings[0]).toContain('前期：')
   })
 
+  it('uses the exact question to distinguish work, relationship, and money readings for 大安→留连→速喜', () => {
+    const [stable, delay, fast] = classicSixRules.palaces
+    const questions = [
+      ['这次求职能成功吗', '事业', '工作基础较明确'],
+      ['这段感情会怎么样', '感情', '关系倾向持续'],
+      ['这笔钱什么时候能收回来', '财运', '已有资源可以保留'],
+    ] as const
+    const readings = questions.map(([question]) => createDivinationInterpretation([stable, delay, fast], undefined, question, 'classic-six'))
+    questions.forEach(([, domain, topicMeaning], index) => {
+      expect(readings[index].summary).toContain(`针对“${domain}”所问`)
+      expect(readings[index].passReadings[0]).toContain(topicMeaning)
+      expect(readings[index].evidence).toContain(`识别到的问题领域：${domain}。`)
+    })
+    expect(new Set(readings.map((reading) => reading.passReadings.join(''))).size).toBe(3)
+  })
+
   it('uses distinct stage roles, an independent conclusion, and actionable six-palace advice', () => {
     const [stable, delay, fast] = classicSixRules.palaces
     const reading = createDivinationInterpretation([stable, delay, fast], undefined, '这次求职能成功吗？', 'classic-six')

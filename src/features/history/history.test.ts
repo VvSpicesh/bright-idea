@@ -21,6 +21,13 @@ function makeRecord(id: string, runId: string, question = '工作是否顺利', 
 describe('本地记录仓库', () => {
   beforeEach(() => localStorage.clear())
 
+  it('stores the original question with its already-generated six-palace interpretation snapshot', () => {
+    const record = makeRecord('relationship-record', 'run-relationship', '这段感情会怎么样')
+    expect(record.question).toBe('这段感情会怎么样')
+    expect(record.interpretation.summary).toContain('针对“感情”所问')
+    expect(record.interpretation.passReadings[0]).toContain('关系倾向持续')
+  })
+
   it('saves one record per runId and supports CRUD and filtering', () => {
     const first = makeRecord('record-1', 'run-1')
     expect(saveRecordOnce(first).added).toBe(true)
