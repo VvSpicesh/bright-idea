@@ -36,8 +36,6 @@ function RulesSectionNav() {
   </nav>
 }
 
-const sectionTitle = (id: RuleSectionId) => RULE_SECTIONS.find((section) => section.id === id)!.title
-
 function SixVerseCard({ name, index }: { name: keyof typeof sixPalaceKnowledge; index: number }) {
   const knowledge = sixPalaceKnowledge[name]
   const keywords = knowledge.generalMeaning.split('、').slice(0, 3).join('、')
