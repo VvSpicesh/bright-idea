@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { calculateThreePasses, classicSixRules, xunNineRules, type RuleSystem, type RuleSystemId } from '../rules'
 import { describeElementRelation, elementControls, elementGenerates } from '../features/divination/interpretation'
 import { palaceSemantics } from '../features/divination/palaceSemantics'
@@ -6,33 +6,79 @@ import { intentRecognitionRules, interpretationDirections, specificTopicLabels, 
 import { getShichen } from '../features/divination/methods'
 import { sixPalaceKnowledge } from '../features/divination/sixPalaceKnowledge'
 import { traditionalPairs, derivedSamePairs } from '../features/divination/dayHourPairs'
-import { RULE_SECTIONS, type RuleSectionId } from './rulesSections'
+import { RULE_SECTION_GROUPS, RULE_SECTIONS, type RuleSectionId } from './rulesSections'
 
-function RulesSectionNav() {
-  const [activeId, setActiveId] = useState<RuleSectionId>(RULE_SECTIONS[0].id)
+function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false }: { systemId: RuleSystemId; onSystemChange: (id: RuleSystemId) => void; showSystemControls?: boolean }) {
+  const [activeId, setActiveId] = useState<RuleSectionId>(systemId === 'classic-six' ? 'six-overview' : 'nine-overview')
+  const [activeGroup, setActiveGroup] = useState<'six' | 'nine' | 'common'>(systemId === 'classic-six' ? 'six' : 'nine')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolling, setScrolling] = useState(false)
+  const activeIdRef = useRef(activeId)
+  activeIdRef.current = activeId
   useEffect(() => {
-    const sectionElements = Array.from(document.querySelectorAll('.rules-section')) as HTMLElement[]
-    RULE_SECTIONS.forEach((section, index) => sectionElements[index]?.setAttribute('id', section.id))
-    const sections = RULE_SECTIONS.map(({ id }) => document.getElementById(id)).filter(Boolean) as HTMLElement[]
+    const sectionElements = Array.from(document.querySelectorAll<HTMLElement>('.rules-section'))
+    const visibleIds = systemId === 'classic-six'
+      ? ['six-palaces', 'six-overview', 'common-methods', 'common-five-elements', 'six-verses', 'six-day-hour', 'common-interpretation', 'common-history']
+      : ['nine-palaces', 'nine-counting', 'common-methods', 'common-five-elements', 'nine-interpretation', 'common-notices', 'common-interpretation', 'common-history']
+    sectionElements.forEach((section, index) => section.id = visibleIds[index] ?? '')
+    const missing = RULE_SECTIONS.filter(({ id }) => !document.getElementById(id))
+    const content = document.querySelector('.rules-content')
+    missing.forEach(({ id, title }) => {
+      const anchor = document.createElement('span')
+      anchor.id = id
+      anchor.className = 'rules-nav-anchor'
+      anchor.setAttribute('aria-label', title)
+      content?.append(anchor)
+    })
+    const activeIds = new Set(RULE_SECTION_GROUPS.find((group) => group.id === (systemId === 'classic-six' ? 'six' : 'nine'))!.sections.map(({ id }) => id))
+    RULE_SECTION_GROUPS.find((group) => group.id === 'common')!.sections.forEach(({ id }) => activeIds.add(id))
+    const sections = [...activeIds].map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[]
     const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver((entries) => {
-      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-      if (visible[0]) setActiveId(visible[0].target.id as RuleSectionId)
+      if (scrolling) return
+      const visible = entries.filter((entry) => entry.isIntersecting && entry.boundingClientRect.top >= 0).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+      if (visible[0]) {
+        const id = visible[0].target.id as RuleSectionId
+        setActiveId(id)
+        setActiveGroup(RULE_SECTION_GROUPS.find((group) => group.sections.some((section) => section.id === id))?.id ?? 'common')
+      }
     }, { rootMargin: '-96px 0px -55% 0px', threshold: [0, 0.2, 0.6] })
     sections.forEach((section) => observer?.observe(section))
+    const onScrollEnd = () => setScrolling(false)
+    window.addEventListener('scrollend', onScrollEnd)
     const hash = window.location.hash.slice(1) as RuleSectionId
-    if (RULE_SECTIONS.some((section) => section.id === hash)) window.setTimeout(() => document.getElementById(hash)?.scrollIntoView({ block: 'start' }), 0)
-    return () => observer?.disconnect()
-  }, [])
-  const jump = (id: RuleSectionId) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    window.history.replaceState(null, '', `#${id}`)
+    if (!scrolling && RULE_SECTIONS.some((section) => section.id === hash) && activeIdRef.current !== hash) window.setTimeout(() => document.getElementById(hash)?.scrollIntoView({ block: 'start' }), 0)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('scrollend', onScrollEnd)
+      sectionElements.forEach((section) => { if (visibleIds.includes(section.id)) section.removeAttribute('id') })
+      document.querySelectorAll('.rules-nav-anchor').forEach((anchor) => anchor.remove())
+    }
+  }, [scrolling, systemId])
+  const jump = (id: RuleSectionId, groupId: 'six' | 'nine' | 'common') => {
+    const group = RULE_SECTION_GROUPS.find((item) => item.id === groupId)!
+    if (groupId !== 'common') {
+      const nextSystem = groupId === 'six' ? 'classic-six' : 'xun-nine'
+      if (nextSystem !== systemId) onSystemChange(nextSystem)
+    }
+    setActiveGroup(groupId)
     setActiveId(id)
+    setScrolling(true)
+    window.history.replaceState(null, '', `#${id}`)
     setMobileOpen(false)
+    const scroll = () => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      window.setTimeout(() => setScrolling(false), 500)
+    }
+    if (groupId === 'common' || (groupId === 'six' && systemId === 'classic-six') || (groupId === 'nine' && systemId === 'xun-nine')) scroll()
+    else window.setTimeout(scroll, 0)
   }
   return <nav className={`rules-toc ${mobileOpen ? 'is-open' : ''}`} aria-label="规则目录">
+    {showSystemControls && <div className="rules-system-radio-compat">{[['classic-six', '六宫小六壬'], ['xun-nine', '九宫小六壬（荀爽体系）']].map(([id, title]) => <label key={id}><input type="radio" name="rules-page-system" checked={systemId === id} onChange={() => onSystemChange(id as RuleSystemId)} />{title}</label>)}</div>}
     <button className="rules-toc-toggle" type="button" aria-expanded={mobileOpen} onClick={() => setMobileOpen((open) => !open)}>规则目录：{RULE_SECTIONS.find((section) => section.id === activeId)?.title}</button>
-    <div className="rules-toc-list">{RULE_SECTIONS.map((section) => <button key={section.id} className={activeId === section.id ? 'is-active' : ''} type="button" aria-current={activeId === section.id ? 'location' : undefined} onClick={() => jump(section.id)}>{section.title}</button>)}</div>
+    <div className="rules-toc-groups">{RULE_SECTION_GROUPS.map((group) => <section className={`rules-toc-group ${activeGroup === group.id ? 'is-active' : ''}`} key={group.id}>
+      <button className="rules-toc-group-title" type="button" aria-expanded={activeGroup === group.id} onClick={() => { setActiveGroup(group.id); jump(group.sections[0].id, group.id) }}>{group.title}</button>
+      {activeGroup === group.id && <div className="rules-toc-list">{group.sections.map((section) => <button key={section.id} className={activeId === section.id ? 'is-active' : ''} type="button" aria-current={activeId === section.id ? 'location' : undefined} onClick={() => jump(section.id, group.id)}>{section.title}</button>)}</div>}
+    </section>)}</div>
   </nav>
 }
 
@@ -76,7 +122,7 @@ export function RulesPage() {
 
   return <section className="content-panel rules-page" aria-labelledby="rules-title">
     <div className="page-heading"><div><p className="eyebrow">当前配置</p><h2 id="rules-title">规则</h2></div><span>版本 {system.ruleVersion}</span></div>
-    <fieldset className="system-choice"><legend>规则体系</legend>{systems.map((item) => <label className="choice" key={item.id}><input type="radio" name="rules-page-system" checked={systemId === item.id} onChange={() => setSystemId(item.id)} /><span>{item.name}</span></label>)}</fieldset><div className="rules-mobile-toc"><RulesSectionNav /></div><div className="rules-layout"><aside className="rules-desktop-toc"><RulesSectionNav /></aside><div className="rules-content">
+<div className="rules-mobile-toc"><RulesSectionNav systemId={systemId} onSystemChange={setSystemId} /></div><div className="rules-layout"><aside className="rules-desktop-toc"><RulesSectionNav systemId={systemId} onSystemChange={setSystemId} showSystemControls /></aside><div className="rules-content">
 
     <section className="rules-section"><h3>宫位顺序与解说配置</h3><p>以下内容直接读取当前规则和解说配置；没有配置的字段显示“未设定”。</p><div className="palace-rule-grid">{system.palaces.map((palace) => {
       const semantics = palaceSemantics[palace.name as keyof typeof palaceSemantics]

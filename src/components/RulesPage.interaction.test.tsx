@@ -33,7 +33,7 @@ describe('规则页折叠卡片', () => {
     HTMLElement.prototype.scrollIntoView = scrollIntoView
     render(<RulesPage />)
     const items = document.querySelectorAll('.rules-desktop-toc .rules-toc-list button')
-    expect(items).toHaveLength(RULE_SECTIONS.length)
+    expect(items).toHaveLength(4)
     RULE_SECTIONS.forEach(({ id }) => expect(document.getElementById(id)).toBeInTheDocument())
     const ids = [...document.querySelectorAll('[id]')].map((element) => element.id).filter(Boolean)
     expect(new Set(ids).size).toBe(ids.length)
