@@ -13,6 +13,8 @@ describe('规则页折叠卡片', () => {
     expect(screen.getByText('大安起首 · 5组传统组合')).toBeInTheDocument()
     expect(document.querySelectorAll('.day-hour-group')).toHaveLength(7)
     expect(document.querySelectorAll('.day-hour-group[open]')).toHaveLength(0)
+    expect(screen.getByText('日时双宫仅用于六宫时间起课。传统口诀存在流派差异，方位、时效和结果只作传统文化参考，不作确定判断。')).toHaveClass('error-text')
+    expect(screen.getByText('健康类内容不能用于疾病诊断、疗效判断或生死预测，请以医生和实际检查结果为准。')).toHaveClass('error-text')
     expect(screen.getAllByText('寻物').length).toBeGreaterThan(0)
     expect(screen.getAllByText('行人消息').length).toBeGreaterThan(0)
     expect(screen.getAllByText('求财').length).toBeGreaterThan(0)
