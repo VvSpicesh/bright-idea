@@ -13,6 +13,7 @@
 
 - [起课规则定义](rules.md)：宫位顺序、五行、方位、关键词、通用三传公式与时间/三字规则。
 - 当前规则配置：`src/rules/configs.ts`；计算引擎：`src/rules/engine.ts`。
+- 规则页章节配置已分离为 `src/components/sixRuleSections.ts` 与 `src/components/nineRuleSections.ts`；页面按当前体系渲染独立正文。
 
 ## 起课方式
 

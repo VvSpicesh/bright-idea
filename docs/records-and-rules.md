@@ -33,6 +33,9 @@ JSON 损坏或浏览器拒绝存取时，页面显示错误并保留应用可用
 
 规则页的数据不是单独抄写的副本：
 
+- 页面只渲染当前选中的完整体系；六宫章节由 `src/components/sixRuleSections.ts` 定义，九宫章节由 `src/components/nineRuleSections.ts` 定义，目录不再使用“通用规则”共用章节。
+- 六宫专属的口诀事项细断与日时双宫不会出现在九宫正文；九宫的病符、桃花、天德只在九宫配置章节显示。
+
 - 宫位、五行、方位、关键词和规则版本读取 `src/rules/configs.ts` 导出的 `classicSixRules`、`xunNineRules`。
 - 初传、中传、末传含义和行动建议读取 `src/features/divination/palaceSemantics.ts` 的 `palaceSemantics`。
 - 六宫与九宫固定示例调用 `src/rules/engine.ts` 的 `calculateThreePasses()`。

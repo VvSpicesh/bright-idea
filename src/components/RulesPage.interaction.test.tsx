@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi } from 'vitest'
 import { RulesPage } from './RulesPage'
 import { RULE_SECTIONS } from './rulesSections'
+import { SIX_RULE_SECTIONS } from './sixRuleSections'
 
 describe('规则页折叠卡片', () => {
   it('renders six cards with only the first open and grouped day-hour cards closed', () => {
@@ -33,8 +34,8 @@ describe('规则页折叠卡片', () => {
     HTMLElement.prototype.scrollIntoView = scrollIntoView
     render(<RulesPage />)
     const items = document.querySelectorAll('.rules-desktop-toc .rules-toc-list button')
-    expect(items).toHaveLength(4)
-    RULE_SECTIONS.forEach(({ id }) => expect(document.getElementById(id)).toBeInTheDocument())
+    expect(items).toHaveLength(SIX_RULE_SECTIONS.length)
+    SIX_RULE_SECTIONS.forEach(({ id }) => expect(document.getElementById(id)).toBeInTheDocument())
     const ids = [...document.querySelectorAll('[id]')].map((element) => element.id).filter(Boolean)
     expect(new Set(ids).size).toBe(ids.length)
     fireEvent.click(items[1])
@@ -70,6 +71,23 @@ describe('规则页折叠卡片', () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' })
     expect(screen.getByRole('button', { name: '九宫小六壬（荀爽体系）' }).parentElement).toHaveClass('is-active')
     expect(screen.queryByRole('button', { name: '通用规则', pressed: true })).not.toBeInTheDocument()
+    window.history.replaceState(null, '', '/')
+  })
+
+  it('keeps the nine interpretation target separate from nine palace configuration', async () => {
+    const scrollIntoView = vi.fn()
+    HTMLElement.prototype.scrollIntoView = scrollIntoView
+    render(<RulesPage />)
+    fireEvent.click(screen.getByRole('button', { name: '九宫小六壬（荀爽体系）' }))
+    await waitFor(() => expect(window.location.hash).toBe('#nine-overview'))
+    const palaceTarget = document.getElementById('nine-palaces')
+    const interpretationTarget = document.getElementById('nine-interpretation')
+    expect(interpretationTarget).toBeInTheDocument()
+    expect(interpretationTarget).not.toBe(palaceTarget)
+    const interpretationItem = screen.getByRole('button', { name: '解说逻辑' })
+    fireEvent.click(interpretationItem)
+    await waitFor(() => expect(window.location.hash).toBe('#nine-interpretation'))
+    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'smooth', block: 'start' })
     window.history.replaceState(null, '', '/')
   })
 })
