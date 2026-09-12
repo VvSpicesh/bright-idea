@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { calculateThreePasses, classicSixRules, xunNineRules, type RuleSystem, type RuleSystemId } from '../rules'
 import { describeElementRelation, elementControls, elementGenerates } from '../features/divination/interpretation'
 import { palaceSemantics as palaceSemanticsData, type PalaceSemantics } from '../features/divination/palaceSemantics'
@@ -14,6 +14,7 @@ const palaceSemantics: Record<string, PalaceSemantics> = palaceSemanticsData
 
 const systems: readonly RuleSystem[] = [classicSixRules, xunNineRules]
 const examples: Record<RuleSystemId, readonly [bigint, bigint, bigint]> = { 'classic-six': [6n, 6n, 6n], 'xun-nine': [1n, 12n, 6n] }
+const RULES_ACTIVATION_LINE = 72 + 16
 const timeRanges = [
   ['23:00–00:59', 23], ['01:00–02:59', 1], ['03:00–04:59', 3], ['05:00–06:59', 5],
   ['07:00–08:59', 7], ['09:00–10:59', 9], ['11:00–12:59', 11], ['13:00–14:59', 13],
@@ -24,81 +25,148 @@ function RulesSectionNav({ systemId, onSystemChange }: { systemId: RuleSystemId;
   const groupId = systemId === 'classic-six' ? 'six' : 'nine'
   const sections = groupId === 'six' ? SIX_RULE_SECTIONS : NINE_RULE_SECTIONS
   const [activeSectionId, setActiveSectionId] = useState<RuleSectionId>(sections[0].id)
-  const [pendingNavigation, setPendingNavigation] = useState<{ system: RuleSystemId; targetId: RuleSectionId; behavior: ScrollBehavior } | null>(null)
-  const [isNavigating, setIsNavigating] = useState(false)
+  const [pendingNavigation, setPendingNavigation] = useState<{ system: RuleSystemId; targetId: RuleSectionId; behavior: ScrollBehavior; token: number } | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const observerRef = useRef<IntersectionObserver | null>(null)
   const activeSectionRef = useRef(activeSectionId)
-  activeSectionRef.current = activeSectionId
+  const systemRef = useRef(systemId)
+  systemRef.current = systemId
+  const isNavigatingRef = useRef(false)
+  const navigationLockTarget = useRef<RuleSectionId | null>(null)
+  const navigationToken = useRef(0)
+  const rafRef = useRef<number | null>(null)
+  const scrollEndHandlerRef = useRef<(() => void) | null>(null)
 
-  const queueNavigation = (targetId: RuleSectionId, targetSystem: RuleSystemId, behavior: ScrollBehavior) => {
-    observerRef.current?.disconnect()
-    setIsNavigating(true)
+  const removeScrollEndHandler = useCallback(() => {
+    if (scrollEndHandlerRef.current) {
+      window.removeEventListener('scrollend', scrollEndHandlerRef.current)
+      scrollEndHandlerRef.current = null
+    }
+  }, [])
+
+  const unlockNavigation = useCallback((allowVisible = false) => {
+    const targetId = navigationLockTarget.current
+    if (!targetId) return false
+    const target = document.getElementById(targetId)
+    if (!target) return false
+    const rect = target.getBoundingClientRect()
+    const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
+    const visible = rect.bottom > RULES_ACTIVATION_LINE && rect.top < window.innerHeight
+    if (Math.abs(rect.top - RULES_ACTIVATION_LINE) <= 8 || (atBottom && visible) || (allowVisible && visible)) {
+      navigationLockTarget.current = null
+      isNavigatingRef.current = false
+      return true
+    }
+    return false
+  }, [])
+
+  const updateActiveFromScroll = useCallback(() => {
+    const lockedTarget = navigationLockTarget.current
+    if (lockedTarget && !unlockNavigation()) return
+    if (lockedTarget && !navigationLockTarget.current) removeScrollEndHandler()
+    if (isNavigatingRef.current) return
+    const currentGroupId = systemRef.current === 'classic-six' ? 'six' : 'nine'
+    const current = Array.from(document.querySelectorAll<HTMLElement>('.rules-section[id]')).filter((section) => section.id.startsWith(`${currentGroupId}-`))
+    if (!current.length) return
+    const positioned = current.map((section) => ({ section, rect: section.getBoundingClientRect() }))
+    const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
+    const lastPassed = positioned.filter(({ rect }) => rect.top <= RULES_ACTIVATION_LINE).at(-1)?.section
+    const lastVisibleAtBottom = atBottom
+      ? positioned.filter(({ rect }) => rect.bottom > RULES_ACTIVATION_LINE && rect.top < window.innerHeight).at(-1)?.section
+      : undefined
+    const currentSection = lastPassed ?? lastVisibleAtBottom ?? current[0]
+    if (currentSection.id !== activeSectionRef.current) {
+      activeSectionRef.current = currentSection.id as RuleSectionId
+      setActiveSectionId(currentSection.id as RuleSectionId)
+    }
+  }, [removeScrollEndHandler, unlockNavigation])
+
+  const scheduleScrollSpy = useCallback(() => {
+    if (rafRef.current !== null) return
+    rafRef.current = window.requestAnimationFrame(() => {
+      rafRef.current = null
+      updateActiveFromScroll()
+    })
+  }, [updateActiveFromScroll])
+
+  const queueNavigation = useCallback((targetId: RuleSectionId, targetSystem: RuleSystemId, behavior: ScrollBehavior) => {
+    isNavigatingRef.current = true
+    activeSectionRef.current = targetId
     setActiveSectionId(targetId)
-    setPendingNavigation({ system: targetSystem, targetId, behavior })
+    navigationLockTarget.current = targetId
+    const token = navigationToken.current + 1
+    navigationToken.current = token
+    setPendingNavigation({ system: targetSystem, targetId, behavior, token })
     setMobileOpen(false)
-  }
+  }, [])
+
+  const handleHistory = useCallback(() => {
+    const hash = window.location.hash.slice(1) as RuleSectionId
+    const target = [...SIX_RULE_SECTIONS, ...NINE_RULE_SECTIONS].find((section) => section.id === hash)
+    if (!target) {
+      if (window.location.hash) {
+        const fallback = systemRef.current === 'classic-six' ? SIX_RULE_SECTIONS[0] : NINE_RULE_SECTIONS[0]
+        queueNavigation(fallback.id, systemRef.current, 'auto')
+      }
+      return
+    }
+    const targetSystem = target.id.startsWith('nine-') ? 'xun-nine' : 'classic-six'
+    queueNavigation(target.id, targetSystem, 'auto')
+    if (targetSystem !== systemRef.current) onSystemChange(targetSystem)
+  }, [onSystemChange, queueNavigation])
 
   useEffect(() => {
-    const handleHistory = () => {
-      const hash = window.location.hash.slice(1) as RuleSectionId
-      const target = [...SIX_RULE_SECTIONS, ...NINE_RULE_SECTIONS].find((section) => section.id === hash)
-      if (!target) return
-      const targetSystem = target.id.startsWith('nine-') ? 'xun-nine' : 'classic-six'
-      if (targetSystem !== systemId) onSystemChange(targetSystem)
-      queueNavigation(target.id, targetSystem, 'auto')
-    }
     handleHistory()
     window.addEventListener('popstate', handleHistory)
     return () => window.removeEventListener('popstate', handleHistory)
-    // History restoration is intentionally registered once for this page instance.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    setActiveSectionId(sections[0].id)
-  }, [systemId])
+  }, [handleHistory])
 
   useLayoutEffect(() => {
     if (!pendingNavigation || pendingNavigation.system !== systemId) return
+    if (pendingNavigation.token !== navigationToken.current) return
     const target = document.getElementById(pendingNavigation.targetId)
     if (!target) {
       window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-        if (pendingNavigation.system === systemId && document.getElementById(pendingNavigation.targetId)) setPendingNavigation({ ...pendingNavigation })
+        if (pendingNavigation.token === navigationToken.current && pendingNavigation.system === systemId && document.getElementById(pendingNavigation.targetId)) setPendingNavigation({ ...pendingNavigation })
       }))
       return
     }
+    removeScrollEndHandler()
     target.scrollIntoView?.({ behavior: pendingNavigation.behavior, block: 'start' })
     window.history.replaceState(null, '', `#${pendingNavigation.targetId}`)
-    setActiveSectionId(pendingNavigation.targetId)
     setPendingNavigation(null)
-    setIsNavigating(false)
-  }, [pendingNavigation, systemId])
+    const onScrollEnd = () => {
+      if (pendingNavigation.token !== navigationToken.current) {
+        removeScrollEndHandler()
+        return
+      }
+      if (unlockNavigation(true)) {
+        removeScrollEndHandler()
+        scheduleScrollSpy()
+      }
+    }
+    scrollEndHandlerRef.current = onScrollEnd
+    window.addEventListener('scrollend', onScrollEnd)
+    if (pendingNavigation.behavior === 'auto') {
+      navigationLockTarget.current = null
+      isNavigatingRef.current = false
+      removeScrollEndHandler()
+    }
+  }, [pendingNavigation, systemId, removeScrollEndHandler, scheduleScrollSpy, unlockNavigation])
 
   useEffect(() => {
-    observerRef.current?.disconnect()
-    if (isNavigating || typeof IntersectionObserver === 'undefined') return
-    const observed = Array.from(document.querySelectorAll<HTMLElement>('.rules-section[id]'))
-    const observer = new IntersectionObserver((entries) => {
-      if (isNavigating) return
-      const targetLine = 88
-      const visible = entries.filter((entry) => entry.isIntersecting)
-        .map((entry) => ({ entry, distance: Math.abs(entry.boundingClientRect.top - targetLine) }))
-        .sort((a, b) => a.distance - b.distance)[0]
-      if (visible) setActiveSectionId(visible.entry.target.id as RuleSectionId)
-    }, { rootMargin: '-88px 0px -60% 0px', threshold: [0, 0.2, 0.6] })
-    observerRef.current = observer
-    observed.forEach((section) => observer.observe(section))
+    window.addEventListener('scroll', scheduleScrollSpy, { passive: true })
+    scheduleScrollSpy()
     return () => {
-      observer.disconnect()
-      if (observerRef.current === observer) observerRef.current = null
+      window.removeEventListener('scroll', scheduleScrollSpy)
+      if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current)
+      removeScrollEndHandler()
     }
-  }, [systemId, isNavigating])
+  }, [removeScrollEndHandler, scheduleScrollSpy])
 
-  const navigateToRuleSection = (section: RuleSection, targetSystem: RuleSystemId) => {
+  const navigateToRuleSection = useCallback((section: RuleSection, targetSystem: RuleSystemId) => {
     queueNavigation(section.id as RuleSectionId, targetSystem, targetSystem === systemId ? 'smooth' : 'auto')
     if (targetSystem !== systemId) onSystemChange(targetSystem)
-  }
+  }, [onSystemChange, queueNavigation, systemId])
   const activeTitle = sections.find((section) => section.id === activeSectionId)?.title ?? sections[0].title
   return <nav className={`rules-toc ${mobileOpen ? 'is-open' : ''}`} aria-label="规则目录">
     <div className="rules-system-radio-compat"><label><input type="radio" name="rules-page-system" checked={systemId === 'classic-six'} onChange={() => navigateToRuleSection(SIX_RULE_SECTIONS[0], 'classic-six')} />六宫小六壬</label><label><input type="radio" name="rules-page-system" checked={systemId === 'xun-nine'} onChange={() => navigateToRuleSection(NINE_RULE_SECTIONS[0], 'xun-nine')} />九宫小六壬（荀爽体系）</label></div>
@@ -136,7 +204,7 @@ function DayHourGroups() {
 }
 
 function MethodGrid({ system }: { system: RuleSystemId }) {
-  return <div className="method-rule-grid"><article><h4>数字起课</h4><p>{system === 'classic-six' ? '输入三个正整数，按六宫顺序连续计数，每一传从上一传落宫继续起数。' : '输入三个正整数，按九宫顺序连续计数；大数如12按完整循环处理，不只取个位数。'}</p></article><article><h4>文字起课</h4><p>输入三个汉字，读取本地笔画数据后进入当前规则体系的同一计算引擎。</p></article><article><h4>随机起课</h4><p>浏览器安全随机生成三个 1～18 的整数，再使用当前体系计算。</p></article><article><h4>时间起课</h4><p>设备本地日期时间转换为农历月、农历日和时辰序号；六宫时间起课另有日时双宫联断。</p></article></div>
+  return <div className="method-rule-grid"><article><h4>数字起课</h4><p>{system === 'classic-six' ? '输入三个正整数，按六宫顺序连续计数，每一传从上一传落宫继续起数。' : '输入三个正整数，按九宫顺序连续计数；大数如12按完整循环处理，不只取个位数。'}</p></article><article><h4>文字起课</h4><p>输入三个汉字，读取本地笔画数据后进入当前规则体系的同一计算引擎。</p></article><article><h4>随机起课</h4><p>浏览器安全随机生成三个 1～18 的整数，再使用当前体系计算。</p></article><article><h4>时间起课</h4><p>{system === 'classic-six' ? '设备本地日期时间转换为农历月、农历日和时辰序号；六宫时间起课另有日时双宫联断。' : '设备本地日期时间转换为农历月、农历日和时辰序号；九宫时间起课不使用日时双宫。'}</p></article></div>
 }
 
 function PalaceOverview({ system }: { system: RuleSystem }) {

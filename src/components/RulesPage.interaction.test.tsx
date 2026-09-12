@@ -90,4 +90,12 @@ describe('规则页折叠卡片', () => {
     expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'smooth', block: 'start' })
     window.history.replaceState(null, '', '/')
   })
+
+  it('chooses the last current-system section that crossed the activation line', async () => {
+    render(<RulesPage />)
+    const sections = [...document.querySelectorAll<HTMLElement>('.rules-section[id^="six-"]')]
+    sections.forEach((section, index) => vi.spyOn(section, 'getBoundingClientRect').mockReturnValue({ top: index < 4 ? 40 : 140 } as DOMRect))
+    fireEvent.scroll(window)
+    await waitFor(() => expect(document.querySelector('.rules-toc-list button.is-active')).toHaveTextContent(SIX_RULE_SECTIONS[3].title))
+  })
 })
