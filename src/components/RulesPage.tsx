@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { calculateThreePasses, classicSixRules, xunNineRules, type RuleSystem, type RuleSystemId } from '../rules'
 import { describeElementRelation, elementControls, elementGenerates } from '../features/divination/interpretation'
 import { palaceSemantics } from '../features/divination/palaceSemantics'
@@ -13,8 +13,35 @@ function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false 
   const [activeGroup, setActiveGroup] = useState<'six' | 'nine' | 'common'>(systemId === 'classic-six' ? 'six' : 'nine')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolling, setScrolling] = useState(false)
-  const activeIdRef = useRef(activeId)
-  activeIdRef.current = activeId
+  const [pendingNavigation, setPendingNavigation] = useState<{ id: RuleSectionId; system: RuleSystemId } | null>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  useEffect(() => {
+    const queueHashNavigation = () => {
+      const hash = window.location.hash.slice(1) as RuleSectionId
+      const target = RULE_SECTIONS.find((section) => section.id === hash)
+      if (!target) return
+      const targetSystem = target.id.startsWith('nine-') ? 'xun-nine' : target.id.startsWith('six-') ? 'classic-six' : systemId
+      setActiveId(target.id)
+      setActiveGroup(targetSystem === 'xun-nine' ? 'nine' : targetSystem === 'classic-six' ? 'six' : 'common')
+      if (targetSystem !== systemId) onSystemChange(targetSystem)
+      setPendingNavigation({ id: target.id, system: targetSystem })
+    }
+    queueHashNavigation()
+    window.addEventListener('popstate', queueHashNavigation)
+    return () => window.removeEventListener('popstate', queueHashNavigation)
+  }, [])
+  useLayoutEffect(() => {
+    if (!pendingNavigation || pendingNavigation.system !== systemId) return
+    const target = document.getElementById(pendingNavigation.id)
+    if (!target) return
+    observerRef.current?.disconnect()
+    setScrolling(true)
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.history.replaceState(null, '', `#${pendingNavigation.id}`)
+    setActiveId(pendingNavigation.id)
+    setPendingNavigation(null)
+    window.setTimeout(() => setScrolling(false), 500)
+  }, [pendingNavigation, systemId])
   useEffect(() => {
     const sectionElements = Array.from(document.querySelectorAll<HTMLElement>('.rules-section'))
     const visibleIds = systemId === 'classic-six'
@@ -42,35 +69,27 @@ function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false 
         setActiveGroup(RULE_SECTION_GROUPS.find((group) => group.sections.some((section) => section.id === id))?.id ?? 'common')
       }
     }, { rootMargin: '-96px 0px -55% 0px', threshold: [0, 0.2, 0.6] })
+    observerRef.current = observer
     sections.forEach((section) => observer?.observe(section))
     const onScrollEnd = () => setScrolling(false)
     window.addEventListener('scrollend', onScrollEnd)
-    const hash = window.location.hash.slice(1) as RuleSectionId
-    if (!scrolling && RULE_SECTIONS.some((section) => section.id === hash) && activeIdRef.current !== hash) window.setTimeout(() => document.getElementById(hash)?.scrollIntoView({ block: 'start' }), 0)
     return () => {
       observer?.disconnect()
+      if (observerRef.current === observer) observerRef.current = null
       window.removeEventListener('scrollend', onScrollEnd)
       sectionElements.forEach((section) => { if (visibleIds.includes(section.id)) section.removeAttribute('id') })
       document.querySelectorAll('.rules-nav-anchor').forEach((anchor) => anchor.remove())
     }
   }, [scrolling, systemId])
   const jump = (id: RuleSectionId, groupId: 'six' | 'nine' | 'common') => {
-    const group = RULE_SECTION_GROUPS.find((item) => item.id === groupId)!
     if (groupId !== 'common') {
       const nextSystem = groupId === 'six' ? 'classic-six' : 'xun-nine'
       if (nextSystem !== systemId) onSystemChange(nextSystem)
     }
     setActiveGroup(groupId)
     setActiveId(id)
-    setScrolling(true)
-    window.history.replaceState(null, '', `#${id}`)
+    setPendingNavigation({ id, system: groupId === 'six' ? 'classic-six' : groupId === 'nine' ? 'xun-nine' : systemId })
     setMobileOpen(false)
-    const scroll = () => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      window.setTimeout(() => setScrolling(false), 500)
-    }
-    if (groupId === 'common' || (groupId === 'six' && systemId === 'classic-six') || (groupId === 'nine' && systemId === 'xun-nine')) scroll()
-    else window.setTimeout(scroll, 0)
   }
   return <nav className={`rules-toc ${mobileOpen ? 'is-open' : ''}`} aria-label="规则目录">
     {showSystemControls && <div className="rules-system-radio-compat">{[['classic-six', '六宫小六壬'], ['xun-nine', '九宫小六壬（荀爽体系）']].map(([id, title]) => <label key={id}><input type="radio" name="rules-page-system" checked={systemId === id} onChange={() => onSystemChange(id as RuleSystemId)} />{title}</label>)}</div>}
@@ -122,7 +141,7 @@ export function RulesPage() {
 
   return <section className="content-panel rules-page" aria-labelledby="rules-title">
     <div className="page-heading"><div><p className="eyebrow">当前配置</p><h2 id="rules-title">规则</h2></div><span>版本 {system.ruleVersion}</span></div>
-<div className="rules-mobile-toc"><RulesSectionNav systemId={systemId} onSystemChange={setSystemId} /></div><div className="rules-layout"><aside className="rules-desktop-toc"><RulesSectionNav systemId={systemId} onSystemChange={setSystemId} showSystemControls /></aside><div className="rules-content">
+<div className="rules-layout"><aside className="rules-desktop-toc"><RulesSectionNav systemId={systemId} onSystemChange={setSystemId} showSystemControls /></aside><div className="rules-content">
 
     <section className="rules-section"><h3>宫位顺序与解说配置</h3><p>以下内容直接读取当前规则和解说配置；没有配置的字段显示“未设定”。</p><div className="palace-rule-grid">{system.palaces.map((palace) => {
       const semantics = palaceSemantics[palace.name as keyof typeof palaceSemantics]

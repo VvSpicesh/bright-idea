@@ -49,7 +49,7 @@ describe('规则页折叠卡片', () => {
     window.history.replaceState(null, '', `#${RULE_SECTIONS[3].id}`)
     render(<RulesPage />)
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
-    const nav = document.querySelector('.rules-mobile-toc .rules-toc') as HTMLElement
+    const nav = document.querySelector('.rules-desktop-toc .rules-toc') as HTMLElement
     const toggle = nav.querySelector('.rules-toc-toggle') as HTMLButtonElement
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(toggle)
