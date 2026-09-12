@@ -155,7 +155,17 @@ describe('三数起课应用流程', () => {
     expect(screen.getByRole('heading', { name: '还没有起课记录' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '规则' }))
     expect(screen.getByRole('heading', { name: '规则' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '宫位顺序与解说配置' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '六宫小六壬体系说明' })).toBeInTheDocument()
+    expect(document.querySelectorAll('.palace-rule-card')).toHaveLength(6)
+
+    fireEvent.click(screen.getByRole('button', { name: '九宫小六壬（荀爽体系）' }))
+    expect(screen.getByRole('heading', { name: '九宫小六壬（荀爽体系）体系说明' })).toBeInTheDocument()
+    expect(document.querySelectorAll('.palace-rule-card')).toHaveLength(9)
+    expect(screen.getByText('病符')).toBeInTheDocument()
+    expect(screen.getByText('桃花')).toBeInTheDocument()
+    expect(screen.getByText('天德')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '六宫口诀与事项细断' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '日时双宫' })).not.toBeInTheDocument()
   })
 
   it('shows corrupt local storage as a recoverable records error instead of blanking the app', () => {

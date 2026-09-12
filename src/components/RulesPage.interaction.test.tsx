@@ -70,7 +70,7 @@ describe('规则页折叠卡片', () => {
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' })
     expect(screen.getByRole('button', { name: '九宫小六壬（荀爽体系）' }).parentElement).toHaveClass('is-active')
-    expect(screen.queryByRole('button', { name: '通用规则', pressed: true })).not.toBeInTheDocument()
+    expect([...document.querySelectorAll('.rules-toc-group-title')].map((button) => button.textContent)).toEqual(['六宫小六壬', '九宫小六壬（荀爽体系）'])
     window.history.replaceState(null, '', '/')
   })
 
