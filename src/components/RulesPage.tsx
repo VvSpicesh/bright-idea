@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { calculateThreePasses, classicSixRules, xunNineRules, type RuleSystem, type RuleSystemId } from '../rules'
 import { describeElementRelation, elementControls, elementGenerates } from '../features/divination/interpretation'
 import { palaceSemantics } from '../features/divination/palaceSemantics'
@@ -8,12 +8,14 @@ import { sixPalaceKnowledge } from '../features/divination/sixPalaceKnowledge'
 import { traditionalPairs, derivedSamePairs } from '../features/divination/dayHourPairs'
 import { RULE_SECTION_GROUPS, RULE_SECTIONS, type RuleSectionId } from './rulesSections'
 
+const RulesSystemContext = createContext<RuleSystemId>('classic-six')
+
 function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false }: { systemId: RuleSystemId; onSystemChange: (id: RuleSystemId) => void; showSystemControls?: boolean }) {
   const [activeId, setActiveId] = useState<RuleSectionId>(systemId === 'classic-six' ? 'six-overview' : 'nine-overview')
   const [activeGroup, setActiveGroup] = useState<'six' | 'nine' | 'common'>(systemId === 'classic-six' ? 'six' : 'nine')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolling, setScrolling] = useState(false)
-  const [pendingNavigation, setPendingNavigation] = useState<{ id: RuleSectionId; system: RuleSystemId } | null>(null)
+  const [pendingNavigation, setPendingNavigation] = useState<{ id: RuleSectionId; system: RuleSystemId; behavior: ScrollBehavior } | null>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   useEffect(() => {
     const queueHashNavigation = () => {
@@ -24,7 +26,7 @@ function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false 
       setActiveId(target.id)
       setActiveGroup(targetSystem === 'xun-nine' ? 'nine' : targetSystem === 'classic-six' ? 'six' : 'common')
       if (targetSystem !== systemId) onSystemChange(targetSystem)
-      setPendingNavigation({ id: target.id, system: targetSystem })
+      setPendingNavigation({ id: target.id, system: targetSystem, behavior: 'auto' })
     }
     queueHashNavigation()
     window.addEventListener('popstate', queueHashNavigation)
@@ -32,24 +34,31 @@ function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false 
   }, [])
   useLayoutEffect(() => {
     if (!pendingNavigation || pendingNavigation.system !== systemId) return
-    const target = document.getElementById(pendingNavigation.id)
-    if (!target) return
-    observerRef.current?.disconnect()
-    setScrolling(true)
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    window.history.replaceState(null, '', `#${pendingNavigation.id}`)
-    setActiveId(pendingNavigation.id)
-    setPendingNavigation(null)
-    window.setTimeout(() => setScrolling(false), 500)
+    const locate = () => {
+      const target = document.getElementById(pendingNavigation.id)
+      if (!target) return
+      observerRef.current?.disconnect()
+      setScrolling(true)
+      target.scrollIntoView?.({ behavior: pendingNavigation.behavior, block: 'start' })
+      window.history.replaceState(null, '', `#${pendingNavigation.id}`)
+      setActiveId(pendingNavigation.id)
+      setPendingNavigation(null)
+      window.setTimeout(() => setScrolling(false), 500)
+    }
+    if (document.getElementById(pendingNavigation.id)) locate()
+    else window.requestAnimationFrame(() => window.requestAnimationFrame(locate))
   }, [pendingNavigation, systemId])
   useEffect(() => {
     const sectionElements = Array.from(document.querySelectorAll<HTMLElement>('.rules-section'))
     const visibleIds = systemId === 'classic-six'
-      ? ['six-palaces', 'six-overview', 'common-methods', 'common-five-elements', 'six-verses', 'six-day-hour', 'common-interpretation', 'common-history']
-      : ['nine-palaces', 'nine-counting', 'common-methods', 'common-five-elements', 'nine-interpretation', 'common-notices', 'common-interpretation', 'common-history']
-    sectionElements.forEach((section, index) => section.id = visibleIds[index] ?? '')
+      ? ['six-overview', 'six-palaces', 'common-methods', 'common-five-elements', 'six-verses', 'six-day-hour', 'common-interpretation', 'common-history']
+      : ['nine-overview', 'nine-palaces', 'nine-counting', 'common-methods', '', '', 'common-interpretation', 'common-history']
+    sectionElements.forEach((section, index) => {
+      section.id = visibleIds[index] ?? ''
+      section.dataset.ruleSystem = index === 4 || index === 5 ? 'six' : 'common'
+    })
     const missing = RULE_SECTIONS.filter(({ id }) => !document.getElementById(id))
-    const content = document.querySelector('.rules-content')
+    const content = sectionElements[0] ?? document.querySelector('.rules-content')
     missing.forEach(({ id, title }) => {
       const anchor = document.createElement('span')
       anchor.id = id
@@ -59,7 +68,7 @@ function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false 
     })
     const activeIds = new Set(RULE_SECTION_GROUPS.find((group) => group.id === (systemId === 'classic-six' ? 'six' : 'nine'))!.sections.map(({ id }) => id))
     RULE_SECTION_GROUPS.find((group) => group.id === 'common')!.sections.forEach(({ id }) => activeIds.add(id))
-    const sections = [...activeIds].map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[]
+    const sections = sectionElements.filter((section) => activeIds.has(section.id))
     const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver((entries) => {
       if (scrolling) return
       const visible = entries.filter((entry) => entry.isIntersecting && entry.boundingClientRect.top >= 0).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
@@ -77,7 +86,7 @@ function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false 
       observer?.disconnect()
       if (observerRef.current === observer) observerRef.current = null
       window.removeEventListener('scrollend', onScrollEnd)
-      sectionElements.forEach((section) => { if (visibleIds.includes(section.id)) section.removeAttribute('id') })
+      sectionElements.forEach((section) => { if (visibleIds.includes(section.id)) section.removeAttribute('id'); section.removeAttribute('data-rule-system') })
       document.querySelectorAll('.rules-nav-anchor').forEach((anchor) => anchor.remove())
     }
   }, [scrolling, systemId])
@@ -88,11 +97,13 @@ function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false 
     }
     setActiveGroup(groupId)
     setActiveId(id)
-    setPendingNavigation({ id, system: groupId === 'six' ? 'classic-six' : groupId === 'nine' ? 'xun-nine' : systemId })
+    setScrolling(true)
+    const targetSystem = groupId === 'six' ? 'classic-six' : groupId === 'nine' ? 'xun-nine' : systemId
+    setPendingNavigation({ id, system: targetSystem, behavior: targetSystem === systemId ? 'smooth' : 'auto' })
     setMobileOpen(false)
   }
   return <nav className={`rules-toc ${mobileOpen ? 'is-open' : ''}`} aria-label="规则目录">
-    {showSystemControls && <div className="rules-system-radio-compat">{[['classic-six', '六宫小六壬'], ['xun-nine', '九宫小六壬（荀爽体系）']].map(([id, title]) => <label key={id}><input type="radio" name="rules-page-system" checked={systemId === id} onChange={() => onSystemChange(id as RuleSystemId)} />{title}</label>)}</div>}
+    {showSystemControls && <div className="rules-system-radio-compat">{[['classic-six', '六宫小六壬'], ['xun-nine', '九宫小六壬（荀爽体系）']].map(([id, title]) => <label key={id}><input type="radio" name="rules-page-system" checked={systemId === id} onChange={() => jump(id === 'classic-six' ? 'six-overview' : 'nine-overview', id === 'classic-six' ? 'six' : 'nine')} />{title}</label>)}</div>}
     <button className="rules-toc-toggle" type="button" aria-expanded={mobileOpen} onClick={() => setMobileOpen((open) => !open)}>规则目录：{RULE_SECTIONS.find((section) => section.id === activeId)?.title}</button>
     <div className="rules-toc-groups">{RULE_SECTION_GROUPS.map((group) => <section className={`rules-toc-group ${activeGroup === group.id ? 'is-active' : ''}`} key={group.id}>
       <button className="rules-toc-group-title" type="button" aria-expanded={activeGroup === group.id} onClick={() => { setActiveGroup(group.id); jump(group.sections[0].id, group.id) }}>{group.title}</button>
@@ -102,6 +113,7 @@ function RulesSectionNav({ systemId, onSystemChange, showSystemControls = false 
 }
 
 function SixVerseCard({ name, index }: { name: keyof typeof sixPalaceKnowledge; index: number }) {
+  if (useContext(RulesSystemContext) !== 'classic-six') return null
   const knowledge = sixPalaceKnowledge[name]
   const keywords = knowledge.generalMeaning.split('、').slice(0, 3).join('、')
   const topics = Object.entries(knowledge.specificTopicMeanings)
@@ -112,6 +124,7 @@ function SixVerseCard({ name, index }: { name: keyof typeof sixPalaceKnowledge; 
 }
 
 function DayHourGroup({ day, pairs }: { day: string; pairs: readonly typeof traditionalPairs[number][] }) {
+  if (useContext(RulesSystemContext) !== 'classic-six') return null
   return <details className="day-hour-group"><summary><span>{day}起首 · 5组传统组合</span><span className="collapse-icon" aria-hidden="true">⌄</span></summary><div className="day-hour-pairs">{pairs.map((pair) => <article className="day-hour-pair" key={`${pair.dayPalace}-${pair.hourPalace}`}><header><strong>{pair.dayPalace}＋{pair.hourPalace}</strong><span className="pair-type data-note">传统口诀</span></header><p className="pair-verse">口诀原文：{pair.sourceVerse}</p><p>现代解释：{pair.modernMeaning}</p>{pair.traditionalHint && <small><strong className="pass-label">传统提示：</strong>{pair.traditionalHint}</small>}</article>)}</div></details>
 }
 
@@ -139,7 +152,7 @@ export function RulesPage() {
     ['同五行', describeElementRelation('木', '木')],
   ] as const
 
-  return <section className="content-panel rules-page" aria-labelledby="rules-title">
+  return <RulesSystemContext.Provider value={systemId}><section className={`content-panel rules-page system-${systemId}`} aria-labelledby="rules-title">
     <div className="page-heading"><div><p className="eyebrow">当前配置</p><h2 id="rules-title">规则</h2></div><span>版本 {system.ruleVersion}</span></div>
 <div className="rules-layout"><aside className="rules-desktop-toc"><RulesSectionNav systemId={systemId} onSystemChange={setSystemId} showSystemControls /></aside><div className="rules-content">
 
@@ -161,5 +174,5 @@ export function RulesPage() {
     <section className="rules-section"><h3>解说逻辑</h3><p>初传代表前期，中传代表发展过程，末传代表结果倾向。topic 方向包括 {interpretationDirections.join('、')}；自动识别顺序为 {topicRecognitionRules.map(([direction]) => direction).join(' → ')}，未匹配时为综合。intent 依次识别 {intentRecognitionRules.map(([intent, pattern]) => `${intent}（${pattern.source.replaceAll('|', '、')}）`).join('、')}，未匹配时为 trend。</p><p>六宫天干、地支、藏干属于进阶类象，存在流派差异，不参与三传落宫计算。topic 和 intent 只调整表达角度，不修改三传和五行。解说属于规则辅助，不是事实结论。AI 按钮只复制提示词并跳转外部网站，不调用 API。</p></section>
 
     <section className="rules-section"><h3>版本与历史快照</h3><p>当前体系规则版本为 {system.ruleVersion}。历史记录保存起课当时的规则版本、三传、步骤和解说快照；查看旧记录不会按当前配置重新计算。使用“按当前规则重新起课”会新增记录，不覆盖旧记录。</p></section>
-    </div></div></section>
+    </div></div></section></RulesSystemContext.Provider>
 }

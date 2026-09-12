@@ -177,6 +177,7 @@ h1 { margin: 0; color: #1f6f5b; font-size: clamp(2.5rem, 12vw, 4.8rem); line-hei
 .rules-toc-group.is-active > .rules-toc-group-title { background: #e9dfd0; }
 .rules-toc-group-title:hover, .rules-toc-group-title:focus-visible { background: #fff8ed; outline: none; }
 .rules-nav-anchor { display: block; height: 0; scroll-margin-top: 88px; }
+.system-xun-nine .rules-section[data-rule-system="six"] { display: none; }
 .palace-rule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .palace-rule-card { overflow: hidden; border: 1px solid #d9cbb5; border-radius: 6px; background: rgba(255, 255, 255, .3); }
 .palace-rule-card header { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; color: #fff; background: #1f6f5b; }

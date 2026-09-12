@@ -58,4 +58,18 @@ describe('规则页折叠卡片', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     window.history.replaceState(null, '', '/')
   })
+
+  it('switches systems before navigating and uses one non-smooth scroll', async () => {
+    const scrollIntoView = vi.fn()
+    HTMLElement.prototype.scrollIntoView = scrollIntoView
+    render(<RulesPage />)
+    fireEvent.click(screen.getByRole('button', { name: '九宫小六壬（荀爽体系）' }))
+    await waitFor(() => expect(screen.getByRole('radio', { name: '九宫小六壬（荀爽体系）' })).toBeChecked())
+    await waitFor(() => expect(window.location.hash).toBe('#nine-overview'))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' })
+    expect(screen.getByRole('button', { name: '九宫小六壬（荀爽体系）' }).parentElement).toHaveClass('is-active')
+    expect(screen.queryByRole('button', { name: '通用规则', pressed: true })).not.toBeInTheDocument()
+    window.history.replaceState(null, '', '/')
+  })
 })
